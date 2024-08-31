@@ -1,8 +1,20 @@
 # ainaglam
 
-A new Flutter project.
+Chatting app developed using Flutter.
+There are group, single chat room. 
 
-## Getting Started
+## How to build it
+
+### git clone
+### cd ainaglam
+### flutter pub get
+### flutter run
+### For ios
+ flutter build ios
+### For Android
+ flutter build android
+
+## Getting Started  Flutter
 
 This project is a starting point for a Flutter application.
 

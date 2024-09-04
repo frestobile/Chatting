@@ -22,10 +22,10 @@ class AuthProvider with ChangeNotifier {
     _status = false;
     _isLoading = true;
     notifyListeners();
-    final response = await _authService.sendSmsCode(email);
+    var response = await _authService.sendSmsCode(email);
     _isLoading = false;
 
-    if (response['success']) {
+    if (response['success'] == true) {
       _status = response['success'];
     } else {
       showStatusDialog(context, response['message'], false);
@@ -39,17 +39,17 @@ class AuthProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    // final response = await _authService.verifySmsCode(smsCode);
-    // if (response['succsss']) {
-    //   // _user = User.fromJson(response['data']);
-    //   _status = true;
-    // } else {
-    //   showStatusDialog(context, response['message'], false);
-    // }
-    // await _saveUserToPrefs(_user!); // Save user session locally
-    _status = true;
-
+    var response = await _authService.verifySmsCode(smsCode);
     _isLoading = false;
+    if (response['success']) {
+      _user = User.fromJson(response['data']['data']);
+      await _saveUserToPrefs(_user!);
+      _status = response['success'];
+    } else {
+      showStatusDialog(context, response['message'], false);
+    }
+    await _saveUserToPrefs(_user!); // Save user session locally
+
     notifyListeners();
   }
 

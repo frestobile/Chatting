@@ -10,7 +10,9 @@ class SmsVerificationScreen extends StatelessWidget {
       List.generate(6, (_) => TextEditingController());
   final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
 
-  SmsVerificationScreen({super.key});
+  final String emailString;
+
+  SmsVerificationScreen({super.key, required this.emailString});
 
   @override
   Widget build(BuildContext context) {
@@ -29,21 +31,21 @@ class SmsVerificationScreen extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               RichText(
-                text: const TextSpan(
-                  style: TextStyle(
+                text: TextSpan(
+                  style: const TextStyle(
                     fontSize: 16,
                     color: Color.fromARGB(255, 48, 48, 48),
                   ),
                   children: <TextSpan>[
-                    TextSpan(text: '6 文字のコードを '),
+                    const TextSpan(text: '6 文字のコードを '),
                     TextSpan(
-                      text: 'kasuminch@gmail.com',
-                      style: TextStyle(
+                      text: emailString,
+                      style: const TextStyle(
                         color: Colors.redAccent,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    TextSpan(text: ' に送信しました。24時間以内に入力してください。'),
+                    const TextSpan(text: ' に送信しました。24時間以内に入力してください。'),
                   ],
                 ),
               ),
@@ -95,6 +97,7 @@ class SmsVerificationScreen extends StatelessWidget {
                           if (smsCode == "" || smsCode.length < 6) {
                             return;
                           }
+                          print(smsCode);
                           context.closeKeyboard();
                           await authProvider.verifySmsCode(smsCode, context);
                           if (authProvider.status == true) {

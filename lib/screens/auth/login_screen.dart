@@ -65,8 +65,9 @@ class _AuthScreenState extends State<LoginScreen> {
                               if (authProvider.status == true) {
                                 Navigator.of(context).pushReplacement(
                                   MaterialPageRoute(
-                                    builder: (context) =>
-                                        SmsVerificationScreen(),
+                                    builder: (context) => SmsVerificationScreen(
+                                        emailString:
+                                            _emailController.text.trim()),
                                   ),
                                 );
                               }

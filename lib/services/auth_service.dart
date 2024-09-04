@@ -8,23 +8,14 @@ class AuthService {
   /// Sends an SMS code to the user's email.
   Future<Map<String, dynamic>> sendSmsCode(String email) async {
     try {
-      // final response = await http.post(
-      //   Uri.parse('$_baseUrl/auth/sign'),
+      var url = Uri.parse('$_baseUrl/auth/signin');
+      var response = await http.post(url, body: {'email': email});
 
-      //   body: jsonEncode(<String, String>{'email': email}),
-      //   headers: <String, String>{
-      //     'Content-Type': 'application/json; charset=UTF-8'
-      //   },
-      // );
-      var url = Uri.parse('$_baseUrl/auth/sign');
-      var response =
-          await http.post(url, body: {'email': 'js8427773@gmail.com'});
-
-      if (response.statusCode == 200) {
+      if (response.statusCode == 201) {
         return {'success': true, 'message': 'SMS code sent successfully.'};
       } else {
         return {
-          'success': true,
+          'success': false,
           'message':
               jsonDecode(response.body)['error'] ?? 'Failed to send SMS code.'
         };
@@ -40,32 +31,25 @@ class AuthService {
   /// Verifies the SMS code provided by the user and returns user data if successful.
   Future<Map<String, dynamic>> verifySmsCode(String smsCode) async {
     try {
-      final response = await http.post(
-        Uri.parse('$_baseUrl/auth/verify'),
-        body: jsonEncode({'code': smsCode}),
-        headers: {'Content-Type': 'application/json'},
-      );
+      var url = Uri.parse('$_baseUrl/auth/verify');
+      var response = await http.post(url,
+          body: {'loginVerificationCode': smsCode});
 
-      // if (response.statusCode == 200) {
-      //   return {
-      //     'success': true,
-      //     'message': 'SMS code sent successfully.',
-      //     'data': jsonDecode(response.body)
-      //   };
-      // } else if (response.statusCode == 401) {
-      //   return {'success': true, 'message': 'Invalid SMS code.', 'data': null};
-      // } else {
-      //   return {
-      //     'success': true,
-      //     'message': 'Failed to verify SMS code: ${response.body}',
-      //     'data': null
-      //   };
-      // }
-      return {
-        'success': true,
-        'message': 'SMS code sent successfully.',
-        'data': jsonDecode(response.body)
-      };
+      if (response.statusCode == 200) {
+        return {
+          'success': true,
+          'message': 'SMS code is Correct.',
+          'data': response.body
+        };
+      } else if (response.statusCode == 401) {
+        return {'success': false, 'message': 'Invalid SMS code.', 'data': null};
+      } else {
+        return {
+          'success': false,
+          'message': 'Failed to verify SMS code: ${response.body}',
+          'data': null
+        };
+      }
     } catch (e) {
       return {
         'success': false,

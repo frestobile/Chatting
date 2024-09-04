@@ -42,9 +42,10 @@ class AuthProvider with ChangeNotifier {
     var response = await _authService.verifySmsCode(smsCode);
     _isLoading = false;
     if (response['success']) {
-      _user = User.fromJson(response['data']['data']);
-      await _saveUserToPrefs(_user!);
+      // _user = User.fromJson(response['data']);
+      // await _saveUserToPrefs(_user!);
       _status = response['success'];
+      showStatusDialog(context, response['message'], true);
     } else {
       showStatusDialog(context, response['message'], false);
     }

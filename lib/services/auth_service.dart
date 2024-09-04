@@ -32,8 +32,8 @@ class AuthService {
   Future<Map<String, dynamic>> verifySmsCode(String smsCode) async {
     try {
       var url = Uri.parse('$_baseUrl/auth/verify');
-      var response = await http.post(url,
-          body: {'loginVerificationCode': smsCode});
+      var response =
+          await http.post(url, body: {'loginVerificationCode': smsCode});
 
       if (response.statusCode == 200) {
         return {

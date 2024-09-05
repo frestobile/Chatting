@@ -40,11 +40,15 @@ class ApiService {
   }
 
   static Future<List<Workspace>> fetchWorkspaces() async {
-    final response = await http.get(
-      Uri.parse('$_baseUrl/workspaces'),
-      headers: {'Content-Type': 'application/json'},
-    );
+    final Map<String, String> queryParams = {
+      'param1': 'value1',
+      'param2': 'value2',
+    };
+    final Uri uri = Uri.parse('$_baseUrl/organisation/workspaces')
+        .replace(queryParameters: queryParams);
+    final http.Response response = await http.get(uri);
 
+    print(jsonDecode(response.body));
     if (response.statusCode == 200) {
       final List<dynamic> data = jsonDecode(response.body);
       return data.map((workspace) => Workspace.fromJson(workspace)).toList();

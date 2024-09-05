@@ -233,13 +233,14 @@ class SmsVerificationScreen extends StatelessWidget {
                                   context.closeKeyboard();
                                   await authProvider.verifySmsCode(
                                       smsCode, context);
-                                  // if (authProvider.status == true) {
-                                  //   Navigator.of(context).pushReplacement(
-                                  //     MaterialPageRoute(
-                                  //       builder: (context) => const WorkspaceScreen(),
-                                  //     ),
-                                  //   );
-                                  // }
+                                  if (authProvider.status == true) {
+                                    Navigator.of(context).pushReplacement(
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            const WorkspaceScreen(),
+                                      ),
+                                    );
+                                  }
                                 },
                           style: ElevatedButton.styleFrom(
                             minimumSize: const Size.fromHeight(48),

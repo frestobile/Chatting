@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ainaglam/utils/dialog.dart';
@@ -42,14 +44,14 @@ class AuthProvider with ChangeNotifier {
     var response = await _authService.verifySmsCode(smsCode);
     _isLoading = false;
     if (response['success']) {
-      // _user = User.fromJson(response['data']);
-      // await _saveUserToPrefs(_user!);
+      Map<String, dynamic> jsonMap = response['data'];
+      Map<String, dynamic> data = jsonMap['data'];
+      _user = User.fromJson(data);
+      await _saveUserToPrefs(_user!);
       _status = response['success'];
-      showStatusDialog(context, response['message'], true);
     } else {
       showStatusDialog(context, response['message'], false);
     }
-    await _saveUserToPrefs(_user!); // Save user session locally
 
     notifyListeners();
   }
@@ -63,15 +65,20 @@ class AuthProvider with ChangeNotifier {
 
   Future<void> _saveUserToPrefs(User user) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('user', user.toJson() as String);
+    String userJson = jsonEncode(user.toJson());
+    await prefs.setString('user_data', userJson);
   }
 
-  Future<void> _loadUserFromPrefs() async {
+  Future<User?> _loadUserFromPrefs() async {
     final prefs = await SharedPreferences.getInstance();
-    final userJson = prefs.getString('user');
+
+    String? userJson = prefs.getString('user_data');
+
     if (userJson != null) {
-      _user = User.fromJson(userJson as Map<String, dynamic>);
+      Map<String, dynamic> userMap = jsonDecode(userJson);
       notifyListeners();
+      return User.fromJson(userMap);
     }
+    return null;
   }
 }

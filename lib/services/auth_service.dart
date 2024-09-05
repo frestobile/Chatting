@@ -39,7 +39,7 @@ class AuthService {
         return {
           'success': true,
           'message': 'SMS code is Correct.',
-          'data': response.body
+          'data': jsonDecode(response.body)
         };
       } else if (response.statusCode == 401) {
         return {'success': false, 'message': 'Invalid SMS code.', 'data': null};

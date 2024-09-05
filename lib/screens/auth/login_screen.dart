@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 import 'package:ainaglam/extentions/context.dart';
 import 'package:ainaglam/extentions/responsive.dart';
@@ -29,63 +30,100 @@ class _AuthScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(),
       body: ConstrainedWidth.mobile(
         child: Form(
           key: _formKey,
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child:
-                  Consumer<AuthProvider>(builder: (context, authProvider, _) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const Spacer(),
-                    Text(
-                      _isSignUp ? 'アカウントを作成' : 'ログイン',
-                      style: context.textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: 16),
-                    InputField.email(
-                      controller: _emailController,
-                      label: 'メールアドレス',
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: authProvider.isLoading
-                          ? null
-                          : () async {
-                              if (!_formKey.currentState!.validate()) {
-                                return;
-                              }
-                              context.closeKeyboard();
-                              await authProvider.login(
-                                  _emailController.text.trim(), context);
-                              if (authProvider.status == true) {
-                                Navigator.of(context).pushReplacement(
-                                  MaterialPageRoute(
-                                    builder: (context) => SmsVerificationScreen(
-                                        emailString:
-                                            _emailController.text.trim()),
-                                  ),
-                                );
-                              }
-                            },
-                      style: ElevatedButton.styleFrom(
-                        minimumSize: const Size.fromHeight(48),
-                      ),
-                      child: const Text('SMSコードを送信する'),
-                    ),
-                    const SizedBox(height: 8),
-                    LabeledTextButton(
-                        label: _isSignUp ? 'すでに登録済みですか？' : '新しいアカウントを作成',
-                        action: _isSignUp ? 'ログイン' : 'サインアップ',
-                        onTap: _toggleMode),
-                    const Spacer(),
-                  ],
-                );
-              }),
+          child: Container(
+            width: 500,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(0.0),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color.fromARGB(142, 222, 220, 220),
+                  blurRadius: 5.0,
+                ),
+              ],
+            ),
+            child: Stack(
+              children: [
+                // Background SVG Image mainAxisSize: MainAxisSize.min,
+                // Positioned.fill(
+                //   child: SvgPicture.asset('assets/images/logo-mark.svg',
+                //       fit: BoxFit.scaleDown),
+                // ),
+                /* Top-right corner image */
+                Positioned(
+                  top: 0,
+                  right: 0,
+                  child: SvgPicture.asset(
+                    'assets/images/logo-mark.svg',
+                    fit: BoxFit.scaleDown,
+                    height: 100,
+                    width: 100,
+                  ),
+                ),
+                /* Foreground content (TextFields, Buttons, etc.) */
+                Padding(
+                  padding: const EdgeInsets.only(
+                    top: 70.0,
+                    bottom: 70.0,
+                    left: 30.0,
+                    right: 30.0,
+                  ),
+                  child: Consumer<AuthProvider>(
+                      builder: (context, authProvider, _) {
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // const Spacer(),  // full screen background set
+                        Text(
+                          _isSignUp ? 'アカウントを作成' : 'ログイン',
+                          style: context.textTheme.headlineLarge,
+                        ),
+                        const SizedBox(height: 16),
+                        InputField.email(
+                          controller: _emailController,
+                          label: 'メールアドレス',
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: authProvider.isLoading
+                              ? null
+                              : () async {
+                                  if (!_formKey.currentState!.validate()) {
+                                    return;
+                                  }
+                                  context.closeKeyboard();
+                                  await authProvider.login(
+                                      _emailController.text.trim(), context);
+                                  if (authProvider.status == true) {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            SmsVerificationScreen(
+                                                emailString: _emailController
+                                                    .text
+                                                    .trim()),
+                                      ),
+                                    );
+                                  }
+                                },
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: const Size.fromHeight(48),
+                          ),
+                          child: const Text('SMSコードを送信する'),
+                        ),
+                        const SizedBox(height: 8),
+                        LabeledTextButton(
+                            label: _isSignUp ? 'すでに登録済みですか？' : '新しいアカウントを作成',
+                            action: _isSignUp ? 'ログイン' : 'サインアップ',
+                            onTap: _toggleMode),
+                        // const Spacer(),    //full screen background set
+                      ],
+                    );
+                  }),
+                ),
+              ],
             ),
           ),
         ),

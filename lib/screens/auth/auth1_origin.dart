@@ -80,9 +80,14 @@ class _AuthScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 8),
                     LabeledTextButton(
-                        label: _isSignUp ? 'すでに登録済みですか？' : '新しいアカウントを作成',
-                        action: _isSignUp ? 'ログイン' : 'サインアップ',
-                        onTap: _toggleMode),
+                      label: _isSignUp ? 'すでに登録済みですか？' : '新しいアカウントを作成',
+                      action: _isSignUp ? 'ログイン' : 'サインアップ',
+                      onTap: _toggleMode,
+                      style: context.textTheme.labelLarge!.copyWith(
+                        color: context.colorScheme.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     const Spacer(),
                   ],
                 );

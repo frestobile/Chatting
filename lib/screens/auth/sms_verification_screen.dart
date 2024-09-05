@@ -23,13 +23,9 @@ class SmsVerificationScreen extends StatelessWidget {
         child: Container(
           width: 500,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(0.0),
-            boxShadow: const [
-              BoxShadow(
-                color: Color.fromARGB(142, 222, 220, 220),
-                blurRadius: 5.0,
-              ),
-            ],
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Color.fromARGB(255, 226, 228, 231)),
+            color: const Color.fromARGB(255, 243, 244, 246),
           ),
           child: Stack(
             children: [

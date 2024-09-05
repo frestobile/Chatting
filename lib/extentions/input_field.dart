@@ -107,7 +107,6 @@ class _InputFieldState extends State<InputField> {
       textInputAction: widget.textInputAction,
       obscureText: _obscureText,
       validator: validator,
-      // boarder: boarder,
       autofillHints: widget.autofillHints,
       onFieldSubmitted: widget.onFieldSubmitted,
       decoration: InputDecoration(
@@ -120,6 +119,7 @@ class _InputFieldState extends State<InputField> {
                     : const Icon(Icons.visibility_sharp),
               )
             : null,
+        border: widget.border,
       ),
     );
   }

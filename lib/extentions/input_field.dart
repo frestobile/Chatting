@@ -10,6 +10,7 @@ class InputField extends StatefulWidget {
     this.autofillHints,
     this.validator,
     this.onFieldSubmitted,
+    this.border = const OutlineInputBorder(),
     super.key,
   });
 
@@ -19,46 +20,48 @@ class InputField extends StatefulWidget {
     TextInputAction textInputAction = TextInputAction.next,
     Key? key,
   }) : this(
-          key: key,
-          controller: controller,
-          label: label,
-          textInputAction: textInputAction,
-          keyboardType: TextInputType.name,
-          autofillHints: const [AutofillHints.name],
-          validator: Validators.required,
-        );
+            key: key,
+            controller: controller,
+            label: label,
+            textInputAction: textInputAction,
+            keyboardType: TextInputType.name,
+            autofillHints: const [AutofillHints.name],
+            validator: Validators.required,
+            border: const OutlineInputBorder());
 
   const InputField.email({
     required TextEditingController controller,
     String label = 'Email',
     TextInputAction textInputAction = TextInputAction.next,
     Key? key,
+    OutlineInputBorder? border,
   }) : this(
-          key: key,
-          controller: controller,
-          label: label,
-          textInputAction: textInputAction,
-          keyboardType: TextInputType.emailAddress,
-          autofillHints: const [AutofillHints.email],
-          validator: Validators.email,
-        );
+            key: key,
+            controller: controller,
+            label: label,
+            textInputAction: textInputAction,
+            keyboardType: TextInputType.emailAddress,
+            autofillHints: const [AutofillHints.email],
+            validator: Validators.email,
+            border: const OutlineInputBorder());
 
   const InputField.password({
     required TextEditingController controller,
     String label = 'Password',
     TextInputAction textInputAction = TextInputAction.next,
     ValueChanged<String>? onFieldSubmitted,
+    OutlineInputBorder? border,
     Key? key,
   }) : this(
-          key: key,
-          controller: controller,
-          label: label,
-          textInputAction: textInputAction,
-          keyboardType: TextInputType.visiblePassword,
-          autofillHints: const [AutofillHints.password],
-          validator: Validators.password,
-          onFieldSubmitted: onFieldSubmitted,
-        );
+            key: key,
+            controller: controller,
+            label: label,
+            textInputAction: textInputAction,
+            keyboardType: TextInputType.visiblePassword,
+            autofillHints: const [AutofillHints.password],
+            validator: Validators.password,
+            onFieldSubmitted: onFieldSubmitted,
+            border: const OutlineInputBorder());
 
   final TextEditingController controller;
   final String label;
@@ -67,6 +70,7 @@ class InputField extends StatefulWidget {
   final List<String>? autofillHints;
   final FormFieldValidator<String>? validator;
   final ValueChanged<String>? onFieldSubmitted;
+  final OutlineInputBorder border;
 
   @override
   State<InputField> createState() => _InputFieldState();
@@ -103,6 +107,7 @@ class _InputFieldState extends State<InputField> {
       textInputAction: widget.textInputAction,
       obscureText: _obscureText,
       validator: validator,
+      // boarder: boarder,
       autofillHints: widget.autofillHints,
       onFieldSubmitted: widget.onFieldSubmitted,
       decoration: InputDecoration(

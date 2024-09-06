@@ -12,10 +12,11 @@ void showStatusDialog(BuildContext context, String message, bool status) {
             onPressed: () {
               Navigator.of(context).pop(); // Dismiss the dialog
             },
-            child: Text('OK'),
+            child: const Text('OK'),
           ),
         ],
       );
     },
   );
 }
+

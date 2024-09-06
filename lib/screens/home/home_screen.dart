@@ -1,7 +1,7 @@
 import 'package:ainaglam/screens/chat/chat_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../providers/workspace_provider.dart';
+import '../../providers/home_provider.dart';
 // import '../../models/channel_model.dart';
 // import '../../models/user_model.dart';
 
@@ -15,7 +15,7 @@ class ChannelAndCoworkersScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Channels & Coworkers')),
       body: FutureBuilder(
-        future: Provider.of<WorkspaceProvider>(context, listen: false)
+        future: Provider.of<HomeProvider>(context, listen: false)
             .fetchWorkspaceDetails(workspaceId),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -23,18 +23,18 @@ class ChannelAndCoworkersScreen extends StatelessWidget {
           } else if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}'));
           } else {
-            return Consumer<WorkspaceProvider>(
-              builder: (context, workspaceProvider, _) {
+            return Consumer<HomeProvider>(
+              builder: (context, homeProvider, _) {
                 return Column(
                   children: [
                     Expanded(
                       child: ListView.builder(
-                        itemCount: workspaceProvider.channels.length,
+                        itemCount: homeProvider.channels.length,
                         itemBuilder: (context, index) {
-                          final channel = workspaceProvider.channels[index];
+                          final channel = homeProvider.channels[index];
                           return ListTile(
                             title: Text(channel.name),
-                            subtitle: Text(channel.description),
+                            subtitle: Text(channel.name),
                             onTap: () {
                               Navigator.of(context).push(
                                 MaterialPageRoute(
@@ -52,9 +52,9 @@ class ChannelAndCoworkersScreen extends StatelessWidget {
                     const Divider(),
                     Expanded(
                       child: ListView.builder(
-                        itemCount: workspaceProvider.coworkers.length,
+                        itemCount: homeProvider.coworkers.length,
                         itemBuilder: (context, index) {
-                          final coworker = workspaceProvider.coworkers[index];
+                          final coworker = homeProvider.coworkers[index];
                           return ListTile(
                             leading: CircleAvatar(
                               backgroundImage: NetworkImage(coworker.avatarUrl),

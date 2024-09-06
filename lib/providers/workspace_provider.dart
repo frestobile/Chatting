@@ -1,30 +1,50 @@
 import 'package:flutter/material.dart';
-import '../models/channel_model.dart';
-import '../models/coworker_model.dart';
+import 'dart:convert';
+import '../models/workspace_model.dart';
 import '../services/workspace_service.dart';
 
 class WorkspaceProvider with ChangeNotifier {
   final WorkspaceService _workspaceService = WorkspaceService();
-  List<Channel> _channels = [];
-  List<Coworker> _coworkers = [];
+  List<Workspace> _workspaces = [];
+  Workspace? _selectedWorkspace;
   bool _isLoading = false;
+  String? _errorMessage;
 
-  List<Channel> get channels => _channels;
-  List<Coworker> get coworkers => _coworkers;
+  bool _test = false;
+
+  List<Workspace> get workspaces => _workspaces;
+  Workspace? get selectedWorkspace => _selectedWorkspace;
   bool get isLoading => _isLoading;
+  String? get errorMessage => _errorMessage;
 
-  Future<void> fetchWorkspaceDetails(String workspaceId) async {
-    _isLoading = true;
+  bool get test => _test;
+
+  Future<void> fetchWorkspaces(String token) async {
+    _isLoading = true; // Start loading
+    _errorMessage = null;
     notifyListeners();
 
     try {
-      _channels = await _workspaceService.fetchChannels(workspaceId);
-      _coworkers = await _workspaceService.fetchCoworkers(workspaceId);
-    } catch (e) {
-      print("Error fetching workspace details: $e");
+      final response = await _workspaceService.fetchWorkspaces(token);
+      if (response["success"]) {
+        List<dynamic> jsonMap = json.decode(response['data'])['data'];
+        // print(jsonMap);
+        // _workspaces = Workspace.fromJsonList(jsonMap);
+        _workspaces = jsonMap.map((org) => Workspace.fromJson(org)).toList();
+        _test = true;
+      } else {
+        _errorMessage = "Failed to load data.";
+      }
+    } catch (error) {
+      _errorMessage = "An error occurred: $error";
     } finally {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  void selectWorkspace(Workspace workspace) {
+    _selectedWorkspace = workspace;
+    notifyListeners();
   }
 }

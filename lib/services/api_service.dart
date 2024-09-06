@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../models/message_model.dart';
-import '../models/workspace_model.dart';
 
 class ApiService {
   static final String _baseUrl = dotenv.env['API_BASE_URL'] ?? '';
@@ -39,23 +38,6 @@ class ApiService {
     }
   }
 
-  static Future<List<Workspace>> fetchWorkspaces() async {
-    final Map<String, String> queryParams = {
-      'param1': 'value1',
-      'param2': 'value2',
-    };
-    final Uri uri = Uri.parse('$_baseUrl/organisation/workspaces')
-        .replace(queryParameters: queryParams);
-    final http.Response response = await http.get(uri);
-
-    print(jsonDecode(response.body));
-    if (response.statusCode == 200) {
-      final List<dynamic> data = jsonDecode(response.body);
-      return data.map((workspace) => Workspace.fromJson(workspace)).toList();
-    } else {
-      throw Exception('Failed to load workspaces');
-    }
-  }
 
   static Future<Message> replyToThread(
       String parentMessageId, String content) async {

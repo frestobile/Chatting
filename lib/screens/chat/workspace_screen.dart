@@ -1,40 +1,142 @@
-import 'package:ainaglam/providers/org_provider.dart';
+import 'package:ainaglam/providers/workspace_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 import '../home/home_screen.dart';
 
 class WorkspaceScreen extends StatelessWidget {
-  const WorkspaceScreen({super.key});
+  final String tokenString;
+  const WorkspaceScreen({super.key, required this.tokenString});
 
   @override
   Widget build(BuildContext context) {
+    // Future.microtask(() =>
+    //     Provider.of<WorkspaceProvider>(context, listen: false)
+    //         .fetchWorkspaces(tokenString));
     return Scaffold(
-      appBar: AppBar(title: const Text('Select Workspace')),
-      body: Consumer<OrgProvider>(
-        builder: (context, orgProvider, _) {
-          if (orgProvider.workspaces.isEmpty) {
-            orgProvider.fetchWorkspaces();
-            return const Center(child: CircularProgressIndicator());
-          }
+      appBar: AppBar(title: const Text('ワークスペースを選択')),
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: SvgPicture.asset(
+              'assets/images/home-cong.svg', // Path to your SVG file
+              fit: BoxFit.cover,
+            ),
+          ),
+          Consumer<WorkspaceProvider>(
+            builder: (context, workspaceProvider, _) {
+              if (workspaceProvider.isLoading) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (!workspaceProvider.test) {
+                workspaceProvider.fetchWorkspaces(tokenString);
+              }
+              if (workspaceProvider.errorMessage != null) {
+                return Center(child: Text(workspaceProvider.errorMessage!));
+              }
 
-          return ListView.builder(
-            itemCount: orgProvider.workspaces.length,
-            itemBuilder: (context, index) {
-              return ListTile(
-                title: Text(orgProvider.workspaces[index].name),
-                onTap: () {
-                  orgProvider.selectWorkspace(orgProvider.workspaces[index]);
-                  Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(
-                      builder: (context) => ChannelAndCoworkersScreen(
-                          workspaceId: orgProvider.workspaces[index].id),
+              final workspaces = workspaceProvider.workspaces;
+
+              if (workspaces.isEmpty) {
+                return const Center(child: Text("No Workspaces Available"));
+              }
+              return Center(
+                  child: ListView.builder(
+                itemCount: workspaces.length,
+                itemBuilder: (context, index) {
+                  final workspace = workspaces[index];
+                  return Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Card(
+                      color: Colors.black,
+                      elevation: 4,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 24,
+                                  backgroundColor:
+                                      Colors.pinkAccent, // Avatar color
+                                  child: Text(
+                                    workspace.name,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      workspace.name,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    Text(
+                                      '${workspace.coWorkers.length} メンバー', // Member count
+                                      style: const TextStyle(
+                                        color: Colors.grey,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            ElevatedButton(
+                              onPressed: () {
+                                workspaceProvider
+                                    .selectWorkspace(workspaces[index]);
+                                Navigator.of(context).pushReplacement(
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        ChannelAndCoworkersScreen(
+                                            workspaceId: workspaces[index].id),
+                                  ),
+                                );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor:
+                                    Colors.grey[850], // Button color
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(24),
+                                ),
+                              ),
+                              child: const Row(
+                                children: [
+                                  Text(
+                                    '開ける', // Open in Japanese
+                                    style: TextStyle(color: Colors.white),
+                                  ),
+                                  SizedBox(width: 8),
+                                  Icon(Icons.arrow_forward,
+                                      color: Colors.white),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   );
                 },
-              );
+              ));
             },
-          );
-        },
+          ),
+        ],
       ),
     );
   }

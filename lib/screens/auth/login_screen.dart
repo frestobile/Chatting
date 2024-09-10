@@ -7,6 +7,7 @@ import 'package:ainaglam/extentions/input_field.dart';
 import 'package:ainaglam/extentions/labeled_text_button.dart';
 import '../../providers/auth_provider.dart';
 import 'sms_verification_screen.dart';
+import 'package:ainaglam/screens/chat/workspace_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -113,7 +114,48 @@ class _AuthScreenState extends State<LoginScreen> {
                           ),
                           child: const Text('SMSコードを送信する'),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 12),
+                        Text(
+                          'or',
+                          style: context.textTheme.labelSmall,
+                        ),
+                        const SizedBox(height: 12),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: const Size.fromHeight(48),
+                          ),
+                          onPressed: authProvider.isLoading
+                              ? null
+                              : () async {
+                                  // await authProvider.loginwithGoogle(context);
+                                  // if (authProvider.status == true) {
+                                  //   Navigator.of(context).push(
+                                  //     MaterialPageRoute(
+                                  //       builder: (context) => WorkspaceScreen(
+                                  //           tokenString: authProvider.token!),
+                                  //     ),
+                                  //   );
+                                  // }
+                                },
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Image.asset(
+                                'assets/images/google-logo.png', // Add Google logo image to assets folder
+                                height: 20.0,
+                              ),
+                              const SizedBox(width: 12.0),
+                              const Text(
+                                'Googleでログイン',
+                                style: TextStyle(
+                                  fontSize: 16.0,
+                                  color: Colors.black54,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 25),
                         LabeledTextButton(
                             label: _isSignUp ? 'すでに登録済みですか？' : '新しいアカウントを作成',
                             action: _isSignUp ? 'ログイン' : 'サインアップ',

@@ -41,6 +41,25 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  // Future<void> loginwithGoogle(BuildContext context) async {
+  //   _status = false;
+  //   _isLoading = true;
+  //   notifyListeners();
+  //   try {
+  //     var response = await _authService.loginWithGoogle();
+  //     if (response['success'] == true) {
+  //       _status = true;
+  //     } else {
+  //       showStatusDialog(context, response['message'], false);
+  //     }
+  //   } catch (error) {
+  //     showStatusDialog(context, "An error occurred: $error", false);
+  //   } finally {
+  //     _isLoading = false;
+  //     notifyListeners();
+  //   }
+  // }
+
   Future<void> verifySmsCode(String smsCode, BuildContext context) async {
     _status = false;
     _isLoading = true;

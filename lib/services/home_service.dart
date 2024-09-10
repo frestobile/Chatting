@@ -1,23 +1,30 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:ainaglam/providers/auth_provider.dart';
+import '../models/user_model.dart';
 import '../models/channel_model.dart';
 import '../models/coworker_model.dart';
 
 class HomeService {
-  final String _baseUrl = dotenv.env['BASE_URL'] ?? '';
+  final String _baseUrl = dotenv.env['API_BASE_URL'] ?? '';
+  final AuthProvider _authProvider = AuthProvider();
 
-  Future<List<Channel>> fetchChannels(String workspaceId) async {
+  Future<Map<String, dynamic>> fetchWorkspaceData(String workspaceId) async {
+    User? userData = await _authProvider.loadUserFromPrefs();
     final response = await http.get(
-      Uri.parse('$_baseUrl/workspaces/$workspaceId/channels'),
-      headers: {'Content-Type': 'application/json'},
+      Uri.parse('$_baseUrl/organisation/$workspaceId'),
+      headers: {'Authorization': 'Bearer ${userData?.token}'},
     );
-
-    if (response.statusCode == 200) {
-      final List<dynamic> data = jsonDecode(response.body);
-      return data.map((channel) => Channel.fromJson(channel)).toList();
+    print(json.decode(response.body)['data']['channels']);
+    if (response.statusCode == 201) {
+      return {"success": true, "msg": "Fetched data", "data": response.body};
     } else {
-      throw Exception('Failed to load channels');
+      return {
+        "success": false,
+        "msg": "Failed to fetch data with status: ${response.statusCode}",
+        "data": null
+      };
     }
   }
 

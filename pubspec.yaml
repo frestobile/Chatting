@@ -30,6 +30,7 @@ dependencies:
   hive: ^2.2.3
   hive_flutter: ^1.1.0
   flutter_svg: ^2.0.4
+  google_sign_in: ^6.1.4  
 
 
   # The following adds the Cupertino Icons font to your application.
@@ -59,6 +60,7 @@ flutter:
     - assets/images/splash.png
     - assets/images/home-cong.svg
     - assets/images/logo-mark.svg
+    - assets/images/google-logo.png
     - assets/.env
   uses-material-design: true
 

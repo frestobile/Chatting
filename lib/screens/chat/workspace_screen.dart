@@ -28,7 +28,7 @@ class WorkspaceScreen extends StatelessWidget {
               if (workspaceProvider.isLoading) {
                 return const Center(child: CircularProgressIndicator());
               }
-              if (!workspaceProvider.test) {
+              if (!workspaceProvider.isApiCalled) {
                 workspaceProvider.fetchWorkspaces(tokenString);
               }
               if (workspaceProvider.errorMessage != null) {
@@ -100,7 +100,7 @@ class WorkspaceScreen extends StatelessWidget {
                               onPressed: () {
                                 workspaceProvider
                                     .selectWorkspace(workspaces[index]);
-                                Navigator.of(context).pushReplacement(
+                                Navigator.of(context).push(
                                   MaterialPageRoute(
                                     builder: (context) =>
                                         ChannelAndCoworkersScreen(

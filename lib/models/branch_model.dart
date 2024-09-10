@@ -1,9 +1,7 @@
-import './coworker_model.dart';
-
-class Channel {
+class Branch {
   final String id;
   final String name;
-  final List<Coworker> collaborators;
+  final List<String> collaborators;
   final String organisation;
   final List<String> hasNotOpen;
   final bool isChannel;
@@ -13,7 +11,7 @@ class Channel {
   final String updatedAt;
   final int unreadMessagesNumber;
 
-  Channel(
+  Branch(
       {required this.id,
       required this.name,
       required this.collaborators,
@@ -26,13 +24,11 @@ class Channel {
       required this.updatedAt,
       this.unreadMessagesNumber = 0});
 
-  // Factory method to create a Channel object from JSON
-  factory Channel.fromJson(Map<String, dynamic> json) {
-    return Channel(
+  factory Branch.fromJson(Map<String, dynamic> json) {
+    return Branch(
         id: json['_id'],
         name: json['name'],
-        collaborators: List<Coworker>.from(json['collaborators']
-            .map((collaborator) => Coworker.fromJson(collaborator))),
+        collaborators: List<String>.from(json['collaborators']),
         organisation: json['organisation'],
         hasNotOpen: List<String>.from(json['hasNotOpen']),
         isChannel: json['isChannel'],
@@ -48,8 +44,7 @@ class Channel {
     return {
       '_id': id,
       'name': name,
-      'collaborators':
-          collaborators.map((collaborator) => collaborator.toJson()).toList(),
+      'collaborators': collaborators,
       'organisation': organisation,
       'hasNotOpen': hasNotOpen,
       'isChannel': isChannel,

@@ -10,20 +10,19 @@ class WorkspaceProvider with ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
 
-  bool _test = false;
+  bool _isApiCalled = false;
 
   List<Workspace> get workspaces => _workspaces;
   Workspace? get selectedWorkspace => _selectedWorkspace;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
-  bool get test => _test;
+  bool get isApiCalled => _isApiCalled;
 
   Future<void> fetchWorkspaces(String token) async {
     _isLoading = true; // Start loading
     _errorMessage = null;
     notifyListeners();
-
     try {
       final response = await _workspaceService.fetchWorkspaces(token);
       if (response["success"]) {
@@ -31,7 +30,7 @@ class WorkspaceProvider with ChangeNotifier {
         // print(jsonMap);
         // _workspaces = Workspace.fromJsonList(jsonMap);
         _workspaces = jsonMap.map((org) => Workspace.fromJson(org)).toList();
-        _test = true;
+        _isApiCalled = true;
       } else {
         _errorMessage = "Failed to load data.";
       }

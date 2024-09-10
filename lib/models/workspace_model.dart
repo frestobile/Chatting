@@ -1,4 +1,5 @@
 import 'package:ainaglam/models/channel_model.dart';
+import 'package:ainaglam/models/branch_model.dart';
 
 class Workspace {
   final String id;
@@ -9,7 +10,7 @@ class Workspace {
   final String name;
   final String joinLink;
   final String url;
-  final List<Channel> channels;
+  final List<Branch> channels;
 
   Workspace({
     required this.id,
@@ -34,8 +35,8 @@ class Workspace {
       name: json['name'],
       joinLink: json['joinLink'],
       url: json['url'],
-      channels: List<Channel>.from(
-          json['channels'].map((channel) => Channel.fromJson(channel))),
+      channels: List<Branch>.from(
+          json['channels'].map((channel) => Branch.fromJson(channel))),
     );
   }
 

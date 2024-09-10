@@ -13,73 +13,74 @@ class ChannelAndCoworkersScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Channels & Coworkers')),
-      body: FutureBuilder(
-        future: Provider.of<HomeProvider>(context, listen: false)
-            .fetchWorkspaceDetails(workspaceId),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+      appBar: AppBar(title: const Text('スレッド & メンバー')),
+      body: Consumer<HomeProvider>(
+        builder: (context, homeProvider, _) {
+          if (homeProvider.isLoading) {
             return const Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          } else {
-            return Consumer<HomeProvider>(
-              builder: (context, homeProvider, _) {
-                return Column(
-                  children: [
-                    Expanded(
-                      child: ListView.builder(
-                        itemCount: homeProvider.channels.length,
-                        itemBuilder: (context, index) {
-                          final channel = homeProvider.channels[index];
-                          return ListTile(
-                            title: Text(channel.name),
-                            subtitle: Text(channel.name),
-                            onTap: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (context) => ChatScreen(
-                                    workspaceId: workspaceId,
-                                    channelId: channel.id,
-                                  ),
-                                ),
-                              );
-                            },
-                          );
-                        },
-                      ),
-                    ),
-                    const Divider(),
-                    Expanded(
-                      child: ListView.builder(
-                        itemCount: homeProvider.coworkers.length,
-                        itemBuilder: (context, index) {
-                          final coworker = homeProvider.coworkers[index];
-                          return ListTile(
-                            leading: CircleAvatar(
-                              backgroundImage: NetworkImage(coworker.avatarUrl),
-                            ),
-                            title: Text(coworker.name),
-                            subtitle: Text(coworker.email),
-                            onTap: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (context) => ChatScreen(
-                                    workspaceId: workspaceId,
-                                    channelId: coworker.id,
-                                  ),
-                                ),
-                              );
-                            },
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                );
-              },
-            );
           }
+          if (!homeProvider.isApiCalled) {
+            homeProvider.fetchWorkspaceDetails(workspaceId);
+          }
+          if (homeProvider.errorMessage != null) {
+            return Center(child: Text(homeProvider.errorMessage!));
+          }
+
+          final channels = homeProvider.channels;
+          final coworkers = homeProvider.coworkers;
+
+          return Column(
+            children: [
+              Expanded(
+                child: ListView.builder(
+                  itemCount: channels.length,
+                  itemBuilder: (context, index) {
+                    final channel = channels[index];
+                    return ListTile(
+                      title: Text(channel.name),
+                      subtitle: Text(channel.name),
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => ChatScreen(
+                              workspaceId: workspaceId,
+                              channelId: channel.id,
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+              const Divider(),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: coworkers.length,
+                  itemBuilder: (context, index) {
+                    final coworker = coworkers[index];
+                    return ListTile(
+                      leading: CircleAvatar(
+                        backgroundImage: NetworkImage(coworker.avatarUrl),
+                      ),
+                      title: Text(coworker.displayName),
+                      subtitle: Text(coworker.email),
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => ChatScreen(
+                              workspaceId: workspaceId,
+                              channelId: coworker.id,
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          );
         },
       ),
     );

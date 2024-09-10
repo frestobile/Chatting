@@ -7,7 +7,7 @@ import '../models/workspace_model.dart';
 
 class WorkspaceService {
   final String _baseUrl = dotenv.env['API_BASE_URL'] ?? '';
-
+  
   Future<Map<String, dynamic>> fetchWorkspaces(String token) async {
     var url = Uri.parse('$_baseUrl/organisation/workspaces');
     var response =

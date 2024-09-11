@@ -62,6 +62,34 @@ flutter:
     - assets/images/logo-mark.svg
     - assets/images/google-logo.png
     - assets/.env
+    - assets/avatars/a.png
+    - assets/avatars/b.png
+    - assets/avatars/c.png
+    - assets/avatars/d.png
+    - assets/avatars/e.png
+    - assets/avatars/f.png
+    - assets/avatars/g.png
+    - assets/avatars/h.png
+    - assets/avatars/i.png
+    - assets/avatars/j.png
+    - assets/avatars/k.png
+    - assets/avatars/l.png
+    - assets/avatars/m.png
+    - assets/avatars/n.png
+    - assets/avatars/o.png
+    - assets/avatars/p.png
+    - assets/avatars/q.png
+    - assets/avatars/r.png
+    - assets/avatars/s.png
+    - assets/avatars/t.png
+    - assets/avatars/u.png
+    - assets/avatars/v.png
+    - assets/avatars/w.png
+    - assets/avatars/x.png
+    - assets/avatars/y.png
+    - assets/avatars/z.png
+    - assets/avatars/default.png
+    - assets/avatars/communite.png
   uses-material-design: true
 
   # To add assets to your application, add an assets section, like this:

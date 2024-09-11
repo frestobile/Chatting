@@ -16,7 +16,6 @@ class HomeService {
       Uri.parse('$_baseUrl/organisation/$workspaceId'),
       headers: {'Authorization': 'Bearer ${userData?.token}'},
     );
-    print(json.decode(response.body)['data']['channels']);
     if (response.statusCode == 201) {
       return {"success": true, "msg": "Fetched data", "data": response.body};
     } else {

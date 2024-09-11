@@ -63,11 +63,11 @@ class ChatProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  void openThread(String parentMessageId) {
-    _threadMessages =
-        _messages.where((msg) => msg.parentId == parentMessageId).toList();
-    notifyListeners();
-  }
+  // void openThread(String parentMessageId) {
+  //   _threadMessages =
+  //       _messages.where((msg) => msg. == parentMessageId).toList();
+  //   notifyListeners();
+  // }
 
   Future<void> replyToThread(String parentMessageId, String content) async {
     final newMessage = await ApiService.replyToThread(parentMessageId, content);

@@ -30,8 +30,7 @@ class ChannelAndCoworkersScreen extends StatelessWidget {
           }
 
           final channels = homeProvider.channels;
-          final coworkers = homeProvider.coworkers;
-          final conversation = homeProvider.conversations;
+          final conversations = homeProvider.conversations;
 
           return Column(
             children: [
@@ -59,9 +58,9 @@ class ChannelAndCoworkersScreen extends StatelessWidget {
                           Navigator.of(context).push(
                             MaterialPageRoute(
                               builder: (context) => ChatScreen(
-                                workspaceId: workspaceId,
-                                channelId: channel.id,
-                              ),
+                                  workspaceId: workspaceId,
+                                  channelId: channel.id,
+                                  isPrivateChat: false),
                             ),
                           );
                         },
@@ -74,33 +73,32 @@ class ChannelAndCoworkersScreen extends StatelessWidget {
               Text("メンバー", style: context.textTheme.headlineSmall),
               Expanded(
                 child: ListView.builder(
-                  itemCount: coworkers.length,
+                  itemCount: conversations.length,
                   itemBuilder: (context, index) {
-                    final coworker = coworkers[index];
+                    final conversation = conversations[index];
                     return ListTile(
-                      leading: coworker.avatarUrl != ''
+                      leading: conversation.collaborators[0].avatarUrl != ''
                           ? CircleAvatar(
-                              radius: 30,
+                              radius: 20,
                               backgroundImage: NetworkImage(
-                                  '${dotenv.env['API_BASE_URL']}/static/avatar/${coworker.avatarUrl}'),
+                                  '${dotenv.env['API_BASE_URL']}/static/avatar/${conversation.collaborators[0].avatarUrl}'),
                             )
                           : CircleAvatar(
-                              radius: 30,
+                              radius: 20,
                               backgroundImage: RegExp(r'^[a-z]$').hasMatch(
-                                      coworker.username[0].toLowerCase())
+                                      conversation.name[0].toLowerCase())
                                   ? AssetImage(
-                                      'avatars/${coworker.username[0].toLowerCase()}.png')
+                                      'avatars/${conversation.name[0].toLowerCase()}.png')
                                   : const AssetImage('avatars/default.png'),
                             ),
-                      title: Text(coworker.displayName),
-                      subtitle: Text(coworker.username),
+                      title: Text(conversation.name),
                       onTap: () {
                         Navigator.of(context).push(
                           MaterialPageRoute(
                             builder: (context) => ChatScreen(
-                              workspaceId: workspaceId,
-                              channelId: coworker.id,
-                            ),
+                                workspaceId: workspaceId,
+                                channelId: conversation.id,
+                                isPrivateChat: true),
                           ),
                         );
                       },

@@ -2,9 +2,10 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import '../models/message_model.dart';
-import '../services/api_service.dart';
+import '../services/chat_service.dart';
 
 class ChatProvider with ChangeNotifier {
+  final ChatService _chatService = ChatService();
   final String workspaceId;
   final String channelId;
   final WebSocketChannel _channel;
@@ -12,6 +13,8 @@ class ChatProvider with ChangeNotifier {
   List<Message> _messages = [];
   List<Message> _threadMessages = [];
   bool _isLoading = false;
+  bool _isApiCalled = false;
+  String? _errorMessage;
 
   ChatProvider({required this.workspaceId, required this.channelId})
       : _channel = WebSocketChannel.connect(
@@ -22,6 +25,8 @@ class ChatProvider with ChangeNotifier {
   List<Message> get messages => _messages;
   List<Message> get threadMessages => _threadMessages;
   bool get isLoading => _isLoading;
+  bool get isApiCalled => _isApiCalled;
+  String? get errorMessage => _errorMessage;
 
   void _onMessageReceived(dynamic message) {
     final decodedMessage = jsonDecode(message);
@@ -30,18 +35,40 @@ class ChatProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> fetchMessages(String workspaceId, String channelId) async {
+  Future<void> fetchChannelMessages(
+      String workspaceId, String channelId) async {
     _isLoading = true;
     notifyListeners();
-    _messages = await ApiService.fetchMessages(workspaceId, channelId);
-    _isLoading = false;
+    try {
+      final response =
+          await _chatService.fetchChannelMessages(workspaceId, channelId);
+    } catch (error) {
+      _errorMessage = "An error occurred: $error";
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchConversationMessages(
+      String workspaceId, String channelId) async {
+    _isLoading = true;
     notifyListeners();
+    try {
+      final response =
+          await _chatService.fetchConversationMessages(workspaceId, channelId);
+    } catch (error) {
+      _errorMessage = "An error occurred: $error";
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
   Future<void> sendMessage(
       String workspaceId, String channelId, String content) async {
     final newMessage =
-        await ApiService.sendMessage(workspaceId, channelId, content);
+        await _chatService.sendMessage(workspaceId, channelId, content);
     _messages.add(newMessage);
     notifyListeners();
   }
@@ -70,7 +97,8 @@ class ChatProvider with ChangeNotifier {
   // }
 
   Future<void> replyToThread(String parentMessageId, String content) async {
-    final newMessage = await ApiService.replyToThread(parentMessageId, content);
+    final newMessage =
+        await _chatService.replyToThread(parentMessageId, content);
     _threadMessages.add(newMessage);
     notifyListeners();
   }

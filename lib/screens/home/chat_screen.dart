@@ -18,7 +18,7 @@ class ChatScreen extends StatefulWidget {
   final String channelId;
   final bool isPrivateChat;
 
-  ChatScreen({
+  const ChatScreen({super.key, 
     required this.workspaceId,
     required this.channelId,
     this.isPrivateChat = false,
@@ -88,7 +88,7 @@ class _ChatScreenState extends State<ChatScreen> {
       padding: const EdgeInsets.all(8.0),
       child: Row(
         children: [
-          Expanded(
+          const Expanded(
             child: TextField(
               decoration: InputDecoration(
                 hintText: 'Message #development',
@@ -97,7 +97,7 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ),
           IconButton(
-            icon: Icon(Icons.send),
+            icon: const Icon(Icons.send),
             onPressed: () {},
           ),
         ],
@@ -109,7 +109,7 @@ class _ChatScreenState extends State<ChatScreen> {
 class MessageBubble extends StatelessWidget {
   final Message message;
 
-  const MessageBubble({required this.message});
+  const MessageBubble({super.key, required this.message});
 
   @override
   Widget build(BuildContext context) {

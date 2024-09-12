@@ -1,9 +1,5 @@
-import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import '../models/channel_model.dart';
-import '../models/coworker_model.dart';
-import '../models/workspace_model.dart';
 
 class WorkspaceService {
   final String _baseUrl = dotenv.env['API_BASE_URL'] ?? '';

@@ -1,4 +1,3 @@
-import 'package:ainaglam/models/channel_model.dart';
 import 'package:ainaglam/models/branch_model.dart';
 
 class Workspace {

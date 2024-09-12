@@ -16,7 +16,7 @@ class ChatScreen extends StatefulWidget {
   final String channelId;
   final bool isPrivateChat;
 
-  ChatScreen({
+  const ChatScreen({super.key, 
     required this.workspaceId,
     required this.channelId,
     this.isPrivateChat = false,
@@ -123,7 +123,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   onTap: () {
                     // Handle reply action
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Reply clicked')),
+                      const SnackBar(content: Text('Reply clicked')),
                     );
                   },
                   child: const Text(
@@ -178,7 +178,7 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
-          title: Text('DEVELOPMENT'),
+          title: const Text('DEVELOPMENT'),
         ),
         body: GestureDetector(
           onTap: () {
@@ -244,7 +244,7 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ),
           IconButton(
-            icon: Icon(Icons.send),
+            icon: const Icon(Icons.send),
             onPressed: () {},
           ),
         ],
@@ -302,7 +302,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 // Then clear the editor for the next input
                 _quillController.clear();
               },
-              child: Text('Send'),
+              child: const Text('Send'),
             ),
           ),
         ],

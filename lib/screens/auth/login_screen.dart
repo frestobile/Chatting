@@ -7,7 +7,6 @@ import 'package:ainaglam/extentions/input_field.dart';
 import 'package:ainaglam/extentions/labeled_text_button.dart';
 import '../../providers/auth_provider.dart';
 import 'sms_verification_screen.dart';
-import 'package:ainaglam/screens/home/workspace_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});

@@ -11,7 +11,7 @@ class ChatProvider with ChangeNotifier {
   // final WebSocketChannel _channel;
 
   List<Message> _messages = [];
-  List<Message> _threadMessages = [];
+  final List<Message> _threadMessages = [];
   bool _isLoading = false;
   bool _isApiCalled = false;
   String? _errorMessage;

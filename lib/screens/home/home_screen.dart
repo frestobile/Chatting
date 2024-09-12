@@ -1,4 +1,3 @@
-import 'package:ainaglam/screens/auth/login_screen.dart';
 // import 'package:ainaglam/screens/home/chat_screen.dart';
 import 'package:ainaglam/screens/home/msg_screen.dart';
 

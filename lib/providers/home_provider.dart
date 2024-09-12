@@ -2,21 +2,21 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import '../models/channel_model.dart';
 import '../models/coworker_model.dart';
-import '../models/conv_model.dart';
+import '../models/conversation_model.dart';
 import '../services/home_service.dart';
 
 class HomeProvider with ChangeNotifier {
   final HomeService _homeService = HomeService();
   List<Channel> _channels = [];
   List<Coworker> _coworkers = [];
-  List<Conv> _conversations = [];
+  List<Conversation> _conversations = [];
   bool _isLoading = false;
   String? _errorMessage;
   bool _isApiCalled = false;
 
   List<Channel> get channels => _channels;
   List<Coworker> get coworkers => _coworkers;
-  List<Conv> get conversations => _conversations;
+  List<Conversation> get conversations => _conversations;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   bool get isApiCalled => _isApiCalled;
@@ -38,9 +38,8 @@ class HomeProvider with ChangeNotifier {
             .toList();
         _channels =
             channeljsonMap.map((channel) => Channel.fromJson(channel)).toList();
-        print(conversationjsonMap);
         _conversations = conversationjsonMap
-            .map((conversation) => Conv.fromJson(conversation))
+            .map((conversation) => Conversation.fromJson(conversation))
             .toList();
       } else {
         _errorMessage = response['msg'];

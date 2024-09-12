@@ -27,8 +27,7 @@ class WorkspaceProvider with ChangeNotifier {
       final response = await _workspaceService.fetchWorkspaces(token);
       if (response["success"]) {
         List<dynamic> jsonMap = json.decode(response['data'])['data'];
-        // print(jsonMap);
-        // _workspaces = Workspace.fromJsonList(jsonMap);
+
         _workspaces = jsonMap.map((org) => Workspace.fromJson(org)).toList();
         _isApiCalled = true;
       } else {

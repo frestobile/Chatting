@@ -2,7 +2,7 @@ import 'package:ainaglam/providers/workspace_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
-import '../home/home_screen.dart';
+import 'home_screen.dart';
 
 class WorkspaceScreen extends StatelessWidget {
   final String tokenString;

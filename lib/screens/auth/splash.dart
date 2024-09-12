@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ainaglam/screens/auth/login_screen.dart';
-import 'package:ainaglam/screens/chat/workspace_screen.dart';
+import 'package:ainaglam/screens/home/workspace_screen.dart';
 import 'package:ainaglam/models/user_model.dart';
 import 'package:ainaglam/providers/auth_provider.dart';
 

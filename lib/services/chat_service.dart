@@ -13,16 +13,15 @@ class ChatService {
       String workspaceId, String conversationId) async {
     User? userData = await _authProvider.loadUserFromPrefs();
     final response = await http.get(
-      Uri.parse(
-          '$_baseUrl/workspaces/$workspaceId/channels/$conversationId/messages'),
+      Uri.parse('$_baseUrl/conversations/$conversationId'),
       headers: {'Authorization': 'Bearer ${userData?.token}'},
     );
 
-    if (response.statusCode == 200) {
+    if (response.statusCode == 201) {
       return {'success': true, 'msg': '', 'data': response.body};
     } else {
       return {
-        'success': true,
+        'success': false,
         'msg': 'Failed to load messages',
         'data': response.body
       };
@@ -34,11 +33,11 @@ class ChatService {
     User? userData = await _authProvider.loadUserFromPrefs();
     final response = await http.get(
       Uri.parse(
-          '$_baseUrl/workspaces/$workspaceId/channels/$conversationId/messages'),
+          '$_baseUrl/messages?conversation=$conversationId&organisation=$workspaceId'),
       headers: {'Authorization': 'Bearer ${userData?.token}'},
     );
 
-    if (response.statusCode == 200) {
+    if (response.statusCode == 201) {
       return {'success': true, 'msg': '', 'data': response.body};
     } else {
       return {
@@ -73,10 +72,10 @@ class ChatService {
       String workspaceId, String channelId) async {
     User? userData = await _authProvider.loadUserFromPrefs();
     final response = await http.get(
-      Uri.parse('$_baseUrl/organisation/$workspaceId'),
+      Uri.parse(
+          '$_baseUrl/messages?channelId=$channelId&organisation=$workspaceId'),
       headers: {'Authorization': 'Bearer ${userData?.token}'},
     );
-    print(json.decode(response.body)['data']['conversations']);
     if (response.statusCode == 201) {
       return {"success": true, "msg": "Fetched data", "data": response.body};
     } else {

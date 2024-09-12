@@ -56,7 +56,6 @@ class Workspace {
   }
 
   static List<Workspace> fromJsonList(List<dynamic> jsonList) {
-    print(jsonList);
     return jsonList.map((json) => Workspace.fromJson(json)).toList();
   }
 }

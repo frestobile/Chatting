@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 import 'package:ainaglam/providers/workspace_provider.dart';
-import './providers/auth_provider.dart';
-import './providers/home_provider.dart';
-import './screens/splash.dart';
+import 'package:ainaglam/providers/auth_provider.dart';
+import 'package:ainaglam/providers/home_provider.dart';
+import 'package:ainaglam/providers/chat_provider.dart';
+import 'package:ainaglam/screens/auth/splash.dart';
 
 void main() async {
   await dotenv.load(fileName: ".env");
@@ -14,6 +15,7 @@ void main() async {
         ChangeNotifierProvider<WorkspaceProvider>(
             create: (_) => WorkspaceProvider()),
         ChangeNotifierProvider<HomeProvider>(create: (_) => HomeProvider()),
+        ChangeNotifierProvider<ChatProvider>(create: (_) => ChatProvider()),
       ],
       child: const MyApp(),
     ),

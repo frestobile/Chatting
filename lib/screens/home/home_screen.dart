@@ -1,5 +1,7 @@
 import 'package:ainaglam/screens/auth/login_screen.dart';
-import 'package:ainaglam/screens/chat/chat_screen.dart';
+// import 'package:ainaglam/screens/home/chat_screen.dart';
+import 'package:ainaglam/screens/home/msg_screen.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
@@ -57,11 +59,11 @@ class ChannelAndCoworkersScreen extends StatelessWidget {
                         onTap: () {
                           Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (context) => ChatScreen(
-                                  workspaceId: workspaceId,
-                                  channelId: channel.id,
-                                  isPrivateChat: false),
-                            ),
+                                builder: (context) => ChatScreen(
+                                    workspaceId: workspaceId,
+                                    channelId: channel.id,
+                                    isPrivateChat: false)),
+                            // builder: (context) => ChatScreen()),
                           );
                         },
                       ),
@@ -95,11 +97,11 @@ class ChannelAndCoworkersScreen extends StatelessWidget {
                       onTap: () {
                         Navigator.of(context).push(
                           MaterialPageRoute(
-                            builder: (context) => ChatScreen(
-                                workspaceId: workspaceId,
-                                channelId: conversation.id,
-                                isPrivateChat: true),
-                          ),
+                              builder: (context) => ChatScreen(
+                                  workspaceId: workspaceId,
+                                  channelId: conversation.id,
+                                  isPrivateChat: true)),
+                          // builder: (context) => ChatScreen()),
                         );
                       },
                     );

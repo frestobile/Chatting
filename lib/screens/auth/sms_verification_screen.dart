@@ -1,4 +1,4 @@
-import 'package:ainaglam/screens/chat/workspace_screen.dart';
+import 'package:ainaglam/screens/home/workspace_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -107,7 +107,6 @@ class SmsVerificationScreen extends StatelessWidget {
                                     '', // Removes the '1/1' under each box
                               ),
                               onChanged: (value) {
-                                print(value);
                                 if (value.length == 1 &&
                                     index < 5 &&
                                     value != " ") {

@@ -1,3 +1,4 @@
+import 'package:ainaglam/screens/home/thread_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -15,7 +16,6 @@ class ChatScreen extends StatefulWidget {
   final String workspaceId;
   final String channelId;
   final bool isPrivateChat;
-
   const ChatScreen({super.key, 
     required this.workspaceId,
     required this.channelId,
@@ -30,32 +30,50 @@ class _ChatScreenState extends State<ChatScreen> {
   OverlayEntry? _overlayEntry;
   final quill.QuillController _quillController = quill.QuillController.basic();
   final ScrollController _scrollController = ScrollController();
+  final TextEditingController _messageController = TextEditingController();
 
+  String organisationId = '';
+  String channelId = '';
+
+  List<Message> messages = [];
   @override
   void initState() {
     super.initState();
     // Call the provider to fetch messages
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      organisationId = widget.workspaceId;
+
       if (widget.isPrivateChat) {
         Provider.of<ChatProvider>(context, listen: false)
             .fetchConversationMessages(widget.workspaceId, widget.channelId);
+        channelId = widget.channelId;
       } else {
         Provider.of<ChatProvider>(context, listen: false)
             .fetchChannelMessages(widget.workspaceId, widget.channelId);
+        channelId = widget.channelId;
       }
     });
+    loadMessages();
+    Provider.of<ChatProvider>(context, listen: false).connect();
   }
 
+  void loadMessages() {
+    setState(() {
+      messages = Provider.of<ChatProvider>(context, listen: false).messages;
+    });
+    _scrollToBottom();
+  }
   @override
   void dispose() {
     _removeReactionPanel();
     _scrollController.dispose();
+     _messageController.dispose();
     super.dispose();
   }
 
   // Function to show the reaction panel
   void _showReactionPanel(
-      BuildContext context, GlobalKey key, String messageId) {
+      BuildContext context, GlobalKey key, Message message) {
     _removeReactionPanel();
 
     final renderBox = key.currentContext!.findRenderObject() as RenderBox;
@@ -78,25 +96,19 @@ class _ChatScreenState extends State<ChatScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 GestureDetector(
-                  // onTap: () => _handleReaction(context, 'message', '👍'),
+                  onTap: () {
+                    _removeReactionPanel();
+                    _handleReaction(context, message, '👍');
+                  },
                   child: Text('👍',
                       style: GoogleFonts.notoColorEmoji(fontSize: 24)),
                 ),
                 const SizedBox(width: 10),
                 GestureDetector(
-                  // onTap: () => _handleReaction(context, 'message', '👎'),
-                  child: Text('👎',
-                      style: GoogleFonts.notoColorEmoji(fontSize: 24)),
-                ),
-                const SizedBox(width: 12),
-                GestureDetector(
-                  // onTap: () => _handleReaction(context, 'message', '😂'),
-                  child: Text('😂',
-                      style: GoogleFonts.notoColorEmoji(fontSize: 24)),
-                ),
-                const SizedBox(width: 10),
-                GestureDetector(
-                  // onTap: () => _handleReaction(context, 'message', '✅'),
+                  onTap: () {
+                    _removeReactionPanel();
+                    _handleReaction(context, message, '✅');
+                  },
                   child: Text('✅',
                       style: GoogleFonts.notoColorEmoji(fontSize: 24)),
                 ),
@@ -104,7 +116,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 GestureDetector(
                   onTap: () {
                     _removeReactionPanel();
-                    // _handleReaction(context, 'message', '👀'),
+                    _handleReaction(context, message, '👀');
                   },
                   child: Text('👀',
                       style: GoogleFonts.notoColorEmoji(fontSize: 24)),
@@ -113,23 +125,29 @@ class _ChatScreenState extends State<ChatScreen> {
                 GestureDetector(
                   onTap: () {
                     _removeReactionPanel();
-                    // _handleReaction(context, 'message', '💖');
+                    _handleReaction(context, message, '💖');
                   },
                   child: Text('💖',
                       style: GoogleFonts.notoColorEmoji(fontSize: 24)),
                 ),
                 const SizedBox(width: 10),
                 GestureDetector(
-                  onTap: () {
-                    // Handle reply action
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Reply clicked')),
-                    );
-                  },
-                  child: const Text(
-                    'reply',
-                    style: TextStyle(color: Colors.white),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => ThreadScreen(parentMessage: message),
+                    ),
                   ),
+                  child: const Icon(Icons.reply),
+                ),
+                const SizedBox(width: 10),
+                GestureDetector(
+                  onTap: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Delete clicked')),
+                    );
+                    //  confirm dialog
+                  },
+                  child: const Icon(Icons.delete)
                 ),
               ],
             ),
@@ -139,26 +157,7 @@ class _ChatScreenState extends State<ChatScreen> {
     );
     Overlay.of(context).insert(_overlayEntry!);
     Provider.of<ChatProvider>(context, listen: false)
-        .setCurrentMessageId(messageId);
-  }
-
-  // Helper function to display individual emoji
-  Widget _emojiReaction(String emoji) {
-    return GestureDetector(
-      onTap: () {
-        // Handle emoji reaction tap
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text('Reacted with $emoji',
-                  style: GoogleFonts.notoColorEmoji(fontSize: 24))),
-        );
-        _removeReactionPanel(); // Remove panel after reaction
-      },
-      child: Text(
-        emoji,
-        style: GoogleFonts.notoColorEmoji(fontSize: 24),
-      ),
-    );
+        .setCurrentMessageId(message.id);
   }
 
   // Function to remove the reaction panel
@@ -169,9 +168,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _scrollToBottom() {
-    if (_scrollController.hasClients) {
-      _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
-    }
+      _scrollController.animateTo(_scrollController.position.maxScrollExtent, duration: const Duration(milliseconds: 500), curve: Curves.easeOut);
   }
 
   @override
@@ -196,7 +193,6 @@ class _ChatScreenState extends State<ChatScreen> {
               return Center(
                   child: Text(chatProvider.errorMessage!)); // Handle errors
             }
-            _scrollToBottom();
             return Column(
               children: [
                 Expanded(
@@ -209,7 +205,7 @@ class _ChatScreenState extends State<ChatScreen> {
                           key: key,
                           onTap: () {
                             if (chatProvider.currentMessageId != message.id) {
-                              _showReactionPanel(context, key, message.id);
+                              _showReactionPanel(context, key, message);
                             }
                           },
                           child: MessageBubble(
@@ -218,26 +214,22 @@ class _ChatScreenState extends State<ChatScreen> {
                     },
                   ),
                 ),
-                MessageInputWidget(
-                  onSend: (content) {
-                    chatProvider.sendMessage(
-                        'workspace_id', 'channel_id', content);
-                  },
-                ),
+                _buildMessageInput(chatProvider)
               ],
             );
           }),
         ));
   }
 
-  Widget _buildMessageInput() {
+  Widget _buildMessageInput(ChatProvider chatProvider) {
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: Row(
         children: [
-          const Expanded(
+          Expanded(
             child: TextField(
-              decoration: InputDecoration(
+              controller: _messageController,
+              decoration: const InputDecoration(
                 hintText: 'Message #development',
                 border: OutlineInputBorder(),
               ),
@@ -245,7 +237,10 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.send),
-            onPressed: () {},
+            onPressed: () {
+              chatProvider.sendMessage(organisationId, channelId, _messageController.text);
+              _messageController.clear(); // Clear the input field
+            },
           ),
         ],
       ),
@@ -308,5 +303,17 @@ class _ChatScreenState extends State<ChatScreen> {
         ],
       ),
     );
+  }
+
+  void _handleReaction(BuildContext context, Message message, String emoji) {
+    final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+    chatProvider.addEmojiReaction(message.id, emoji);
+    Navigator.pop(context);
+  }
+
+  void _deleteMessage(BuildContext context, Message message) {
+    final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+    chatProvider.deleteMessage(message);
+    Navigator.pop(context);
   }
 }

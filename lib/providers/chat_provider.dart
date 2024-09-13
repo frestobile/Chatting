@@ -1,11 +1,16 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:socket_io_client/socket_io_client.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:ainaglam/models/message_model.dart';
 import 'package:ainaglam/services/chat_service.dart';
 
 class ChatProvider with ChangeNotifier {
   final ChatService _chatService = ChatService();
+  late Socket? _socket;
+
   // final String workspaceId;
   // final String channelId;
   // final WebSocketChannel _channel;
@@ -16,12 +21,7 @@ class ChatProvider with ChangeNotifier {
   bool _isApiCalled = false;
   String? _errorMessage;
   String? _currentMessageId;
-
-  // ChatProvider({required this.workspaceId, required this.channelId})
-  //     : _channel = WebSocketChannel.connect(
-  //           Uri.parse('wss://yourserver.com/ws/$workspaceId/$channelId')) {
-  //   _channel.stream.listen(_onMessageReceived);
-  // }
+  bool _isChannel = true;
 
   List<Message> get messages => _messages;
   List<Message> get threadMessages => _threadMessages;
@@ -29,6 +29,28 @@ class ChatProvider with ChangeNotifier {
   bool get isApiCalled => _isApiCalled;
   String? get errorMessage => _errorMessage;
   String? get currentMessageId => _currentMessageId;
+  bool get isChannel => _isChannel;
+
+  // connect to Socket.IO server
+  void connect() {
+    _socket = io(dotenv.env['API_BASE_URL']);
+
+    _socket!.connect();
+
+    _socket!.onConnect((_) {
+      print('Connected to the socket server');
+    });
+
+    // Listen for messages from the server
+    _socket!.on('message', (data) {
+      _messages.add(data);
+      notifyListeners(); // Notify UI about the new message
+    });
+
+    _socket!.onDisconnect((_) {
+      print('Disconnected from the socket server');
+    });
+  }
 
   void _onMessageReceived(dynamic message) {
     final decodedMessage = jsonDecode(message);
@@ -55,6 +77,7 @@ class ChatProvider with ChangeNotifier {
     } catch (error) {
       _errorMessage = "An error occurred: $error";
     } finally {
+      _isChannel = true;
       _isApiCalled = true;
       _isLoading = false;
       notifyListeners();
@@ -63,13 +86,13 @@ class ChatProvider with ChangeNotifier {
   }
 
   Future<void> fetchConversationMessages(
-      String workspaceId, String channelId) async {
+      String workspaceId, String conversationlId) async {
     _errorMessage = null;
     _isLoading = true;
     notifyListeners();
     try {
       final response =
-          await _chatService.fetchConversationMessages(workspaceId, channelId);
+          await _chatService.fetchConversationMessages(workspaceId, conversationlId);
       if (response['success'] == true) {
         List<dynamic> jsonMap = json.decode(response['data'])['data'];
         _messages = jsonMap.map((msg) => Message.fromJson(msg)).toList();
@@ -79,6 +102,7 @@ class ChatProvider with ChangeNotifier {
     } catch (error) {
       _errorMessage = "An error occurred: $error";
     } finally {
+      _isChannel = false;
       _isApiCalled = true;
       _isLoading = false;
       notifyListeners();
@@ -88,6 +112,10 @@ class ChatProvider with ChangeNotifier {
 
   void setCurrentMessageId(String? id) {
     _currentMessageId = id;
+    notifyListeners();
+  }
+
+  Future<void> deleteMessage(Message message) async {
     notifyListeners();
   }
 
@@ -111,7 +139,7 @@ class ChatProvider with ChangeNotifier {
   //   _channel.sink.add(message);
   // }
 
-  void addEmojiReaction(String messageId, String emoji) {
+  Future <void> addEmojiReaction(String messageId, String emoji) async {
     // Implement emoji reaction logic
     notifyListeners();
   }

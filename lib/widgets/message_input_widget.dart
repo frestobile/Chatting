@@ -47,9 +47,8 @@ class _MessageInputWidgetState extends State<MessageInputWidget> {
           IconButton(
             icon: const Icon(Icons.send),
             color: _isComposing ? Theme.of(context).primaryColor : Colors.grey,
-            onPressed: _isComposing
-                ? () => _handleSubmitted(_controller.text)
-                : null,
+            onPressed:
+                _isComposing ? () => _handleSubmitted(_controller.text) : null,
           ),
         ],
       ),

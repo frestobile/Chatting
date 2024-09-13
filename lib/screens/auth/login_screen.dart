@@ -119,7 +119,48 @@ class _AuthScreenState extends State<LoginScreen> {
                             ),
                           ),
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 12),
+                        Text(
+                          'or',
+                          style: context.textTheme.labelSmall,
+                        ),
+                        const SizedBox(height: 12),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: const Size.fromHeight(48),
+                          ),
+                          onPressed: authProvider.isLoading
+                              ? null
+                              : () async {
+                                  // await authProvider.loginwithGoogle(context);
+                                  // if (authProvider.status == true) {
+                                  //   Navigator.of(context).push(
+                                  //     MaterialPageRoute(
+                                  //       builder: (context) => WorkspaceScreen(
+                                  //           tokenString: authProvider.token!),
+                                  //     ),
+                                  //   );
+                                  // }
+                                },
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Image.asset(
+                                'assets/images/google-logo.png', // Add Google logo image to assets folder
+                                height: 20.0,
+                              ),
+                              const SizedBox(width: 12.0),
+                              const Text(
+                                'Googleでログイン',
+                                style: TextStyle(
+                                  fontSize: 16.0,
+                                  color: Colors.black54,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 25),
                         LabeledTextButton(
                           label: _isSignUp ? '' : '',
                           action: _isSignUp ? 'すでに登録済みですか？' : '新しいアカウントを作成',

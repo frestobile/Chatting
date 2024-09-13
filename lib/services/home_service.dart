@@ -10,7 +10,7 @@ class HomeService {
   final AuthProvider _authProvider = AuthProvider();
 
   Future<Map<String, dynamic>> fetchWorkspaceData(String workspaceId) async {
-    User? userData = await _authProvider.loadUserFromPrefs();
+    User? userData = await _authProvider.loadAuthData();
     final response = await http.get(
       Uri.parse('$_baseUrl/organisation/$workspaceId'),
       headers: {'Authorization': 'Bearer ${userData?.token}'},
@@ -26,17 +26,40 @@ class HomeService {
     }
   }
 
-  Future<List<Coworker>> fetchCoworkers(String workspaceId) async {
+  Future<Map<String, dynamic>> fetchChannelData(String channelId) async {
+    User? userData = await _authProvider.loadAuthData();
     final response = await http.get(
-      Uri.parse('$_baseUrl/workspaces/$workspaceId/coworkers'),
-      headers: {'Content-Type': 'application/json'},
+      Uri.parse('$_baseUrl/channel/$channelId'),
+      headers: {'Authorization': 'Bearer ${userData?.token}'},
     );
 
-    if (response.statusCode == 200) {
-      final List<dynamic> data = jsonDecode(response.body);
-      return data.map((friend) => Coworker.fromJson(friend)).toList();
+    if (response.statusCode == 201) {
+      return {'success': true, 'msg': '', 'data': response.body};
     } else {
-      throw Exception('Failed to load coworkers');
+      return {
+        'success': false,
+        'msg': 'Failed to load messages',
+        'data': response.body
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>> fetchConversationData(
+      String conversationId) async {
+    User? userData = await _authProvider.loadAuthData();
+    final response = await http.get(
+      Uri.parse('$_baseUrl/conversations/$conversationId'),
+      headers: {'Authorization': 'Bearer ${userData?.token}'},
+    );
+
+    if (response.statusCode == 201) {
+      return {'success': true, 'msg': '', 'data': response.body};
+    } else {
+      return {
+        'success': false,
+        'msg': 'Failed to load messages',
+        'data': response.body
+      };
     }
   }
 }

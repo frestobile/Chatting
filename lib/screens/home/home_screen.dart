@@ -5,13 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 import 'package:ainaglam/extentions/context.dart';
+import 'package:ainaglam/utils/dialog.dart';
 import '../../providers/home_provider.dart';
 // import '../../models/channel_model.dart';
 // import '../../models/user_model.dart';
 
 class ChannelAndCoworkersScreen extends StatelessWidget {
   final String workspaceId;
-
   const ChannelAndCoworkersScreen({super.key, required this.workspaceId});
 
   @override
@@ -55,15 +55,22 @@ class ChannelAndCoworkersScreen extends StatelessWidget {
                         ),
                         subtitle: Text(channel.title,
                             style: context.textTheme.titleSmall),
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                                builder: (context) => ChatScreen(
-                                    workspaceId: workspaceId,
-                                    channelId: channel.id,
-                                    isPrivateChat: false)),
-                            // builder: (context) => ChatScreen()),
-                          );
+                        onTap: () async {
+                          await homeProvider.fetchChannelData(channel.id);
+                          if (homeProvider.channelData != null) {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                  builder: (context) => ChatScreen(
+                                      workspaceId: workspaceId,
+                                      channelId: channel.id,
+                                      title: homeProvider.channelData!.name,
+                                      isPrivateChat: false)),
+                              // builder: (context) => ChatScreen()),
+                            );
+                          } else {
+                            showStatusDialog(
+                                context, homeProvider.errorMessage!, false);
+                          }
                         },
                       ),
                     );
@@ -92,16 +99,27 @@ class ChannelAndCoworkersScreen extends StatelessWidget {
                                       'avatars/${conversation.name[0].toLowerCase()}.png')
                                   : const AssetImage('avatars/default.png'),
                             ),
-                      title: Text(conversation.name),
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                              builder: (context) => ChatScreen(
-                                  workspaceId: workspaceId,
-                                  channelId: conversation.id,
-                                  isPrivateChat: true)),
-                          // builder: (context) => ChatScreen()),
-                        );
+                      title: conversation.collaborators.length == 1
+                          ? Text('${conversation.name} (あなた)')
+                          : Text(conversation.name),
+                      onTap: () async {
+                        await homeProvider
+                            .fetchConversationData(conversation.id);
+                        if (homeProvider.convData != null) {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                                builder: (context) => ChatScreen(
+                                    workspaceId: workspaceId,
+                                    channelId: conversation.id,
+                                    title: homeProvider.convData!.name,
+                                    avatar: '',
+                                    isPrivateChat: true)),
+                            // builder: (context) => ChatScreen()),
+                          );
+                        } else {
+                          showStatusDialog(
+                              context, homeProvider.errorMessage!, false);
+                        }
                       },
                     );
                   },

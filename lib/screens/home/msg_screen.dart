@@ -1,24 +1,26 @@
 import 'package:ainaglam/screens/home/thread_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:intl/intl.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 
-import 'package:flutter_html/flutter_html.dart';
 import 'package:ainaglam/models/message_model.dart';
 import 'package:ainaglam/providers/chat_provider.dart';
 import 'package:ainaglam/widgets/message_bubble.dart';
-import 'package:ainaglam/widgets/message_input_widget.dart';
 
 class ChatScreen extends StatefulWidget {
   final String workspaceId;
   final String channelId;
+  final String title;
   final bool isPrivateChat;
-  const ChatScreen({super.key, 
+  final String avatar;
+  const ChatScreen({
+    super.key,
     required this.workspaceId,
     required this.channelId,
+    required this.title,
+    this.avatar = '',
     this.isPrivateChat = false,
   });
 
@@ -29,45 +31,44 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   OverlayEntry? _overlayEntry;
   final quill.QuillController _quillController = quill.QuillController.basic();
-  final ScrollController _scrollController = ScrollController();
   final TextEditingController _messageController = TextEditingController();
 
   String organisationId = '';
   String channelId = '';
+  String title = '';
+  String avatar = '';
+  bool isChannel = true;
 
   List<Message> messages = [];
   @override
   void initState() {
     super.initState();
-    // Call the provider to fetch messages
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    setState(() {
       organisationId = widget.workspaceId;
-
+      channelId = widget.channelId;
+      title = widget.title;
+      avatar = widget.avatar;
+      isChannel = !widget.isPrivateChat;
+    });
+    // Call the provider to fetch messages
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      ChatProvider chatProvider =
+          Provider.of<ChatProvider>(context, listen: false);
       if (widget.isPrivateChat) {
-        Provider.of<ChatProvider>(context, listen: false)
-            .fetchConversationMessages(widget.workspaceId, widget.channelId);
-        channelId = widget.channelId;
+        await chatProvider.fetchConversationMessages(
+            widget.workspaceId, widget.channelId);
       } else {
-        Provider.of<ChatProvider>(context, listen: false)
-            .fetchChannelMessages(widget.workspaceId, widget.channelId);
-        channelId = widget.channelId;
+        await chatProvider.fetchChannelMessages(
+            widget.workspaceId, widget.channelId);
       }
     });
-    loadMessages();
-    Provider.of<ChatProvider>(context, listen: false).connect();
+    // Provider.of<ChatProvider>(context, listen: false).connect();
   }
 
-  void loadMessages() {
-    setState(() {
-      messages = Provider.of<ChatProvider>(context, listen: false).messages;
-    });
-    _scrollToBottom();
-  }
   @override
   void dispose() {
     _removeReactionPanel();
-    _scrollController.dispose();
-     _messageController.dispose();
+    _messageController.dispose();
     super.dispose();
   }
 
@@ -134,21 +135,21 @@ class _ChatScreenState extends State<ChatScreen> {
                 GestureDetector(
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (context) => ThreadScreen(parentMessage: message),
+                      builder: (context) =>
+                          ThreadScreen(parentMessage: message),
                     ),
                   ),
                   child: const Icon(Icons.reply),
                 ),
                 const SizedBox(width: 10),
                 GestureDetector(
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Delete clicked')),
-                    );
-                    //  confirm dialog
-                  },
-                  child: const Icon(Icons.delete)
-                ),
+                    onTap: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Delete clicked')),
+                      );
+                      //  confirm dialog
+                    },
+                    child: const Icon(Icons.delete)),
               ],
             ),
           ),
@@ -167,16 +168,28 @@ class _ChatScreenState extends State<ChatScreen> {
     Provider.of<ChatProvider>(context, listen: false).setCurrentMessageId(null);
   }
 
-  void _scrollToBottom() {
-      _scrollController.animateTo(_scrollController.position.maxScrollExtent, duration: const Duration(milliseconds: 500), curve: Curves.easeOut);
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(
-          title: const Text('DEVELOPMENT'),
-        ),
+        appBar: isChannel
+            ? AppBar(title: Text(title))
+            : AppBar(
+                title: Text(title),
+                leading: avatar != ''
+                    ? CircleAvatar(
+                        radius: 40,
+                        backgroundImage: NetworkImage(
+                            '${dotenv.env['API_BASE_URL']}/static/avatar/$avatar'),
+                      )
+                    : CircleAvatar(
+                        radius: 40,
+                        backgroundImage:
+                            RegExp(r'^[a-z]$').hasMatch(title.toLowerCase())
+                                ? AssetImage(
+                                    'avatars/${title[0].toLowerCase()}.png')
+                                : const AssetImage('avatars/default.png'),
+                      ),
+              ),
         body: GestureDetector(
           onTap: () {
             if (_overlayEntry != null) {
@@ -193,6 +206,7 @@ class _ChatScreenState extends State<ChatScreen> {
               return Center(
                   child: Text(chatProvider.errorMessage!)); // Handle errors
             }
+
             return Column(
               children: [
                 Expanded(
@@ -210,6 +224,7 @@ class _ChatScreenState extends State<ChatScreen> {
                           },
                           child: MessageBubble(
                             message: message,
+                            user: chatProvider.user!,
                           ));
                     },
                   ),
@@ -238,7 +253,8 @@ class _ChatScreenState extends State<ChatScreen> {
           IconButton(
             icon: const Icon(Icons.send),
             onPressed: () {
-              chatProvider.sendMessage(organisationId, channelId, _messageController.text);
+              chatProvider.sendMessage(
+                  organisationId, channelId, _messageController.text);
               _messageController.clear(); // Clear the input field
             },
           ),
@@ -308,12 +324,12 @@ class _ChatScreenState extends State<ChatScreen> {
   void _handleReaction(BuildContext context, Message message, String emoji) {
     final chatProvider = Provider.of<ChatProvider>(context, listen: false);
     chatProvider.addEmojiReaction(message.id, emoji);
-    Navigator.pop(context);
+    // Navigator.pop(context);
   }
 
   void _deleteMessage(BuildContext context, Message message) {
     final chatProvider = Provider.of<ChatProvider>(context, listen: false);
     chatProvider.deleteMessage(message);
-    Navigator.pop(context);
+    // Navigator.pop(context);
   }
 }

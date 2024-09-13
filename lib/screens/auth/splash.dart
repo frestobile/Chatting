@@ -22,7 +22,7 @@ class _SplashScreenState extends State<SplashScreen> {
   Future<void> navigateToNextScreen() async {
     await Future.delayed(
         const Duration(seconds: 2)); // Display splash for 2 seconds
-    User? userData = await _authProvider.loadUserFromPrefs();
+    User? userData = await _authProvider.loadAuthData();
     if (userData != null) {
       Navigator.pushReplacement(
         context,

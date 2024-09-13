@@ -28,9 +28,8 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   OverlayEntry? _overlayEntry;
-  final LayerLink _layerLink = LayerLink();
-  GlobalKey? _currentMessageKey;
   final quill.QuillController _quillController = quill.QuillController.basic();
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
@@ -45,6 +44,13 @@ class _ChatScreenState extends State<ChatScreen> {
             .fetchChannelMessages(widget.workspaceId, widget.channelId);
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _removeReactionPanel();
+    _scrollController.dispose();
+    super.dispose();
   }
 
   // Function to show the reaction panel
@@ -131,7 +137,6 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
       ),
     );
-    _currentMessageKey = key;
     Overlay.of(context).insert(_overlayEntry!);
     Provider.of<ChatProvider>(context, listen: false)
         .setCurrentMessageId(messageId);
@@ -160,8 +165,13 @@ class _ChatScreenState extends State<ChatScreen> {
   void _removeReactionPanel() {
     _overlayEntry?.remove();
     _overlayEntry = null;
-    _currentMessageKey = null;
     Provider.of<ChatProvider>(context, listen: false).setCurrentMessageId(null);
+  }
+
+  void _scrollToBottom() {
+    if (_scrollController.hasClients) {
+      _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+    }
   }
 
   @override
@@ -186,7 +196,7 @@ class _ChatScreenState extends State<ChatScreen> {
               return Center(
                   child: Text(chatProvider.errorMessage!)); // Handle errors
             }
-
+            _scrollToBottom();
             return Column(
               children: [
                 Expanded(
@@ -208,13 +218,12 @@ class _ChatScreenState extends State<ChatScreen> {
                     },
                   ),
                 ),
-                // _buildMessageInput(),
-                // MessageInputWidget(onSend: => {
-                //   print("object");
-                // })
-                _buildEditorToolbar(),
-                _buildEditor(),
-                _buildSendButton()
+                MessageInputWidget(
+                  onSend: (content) {
+                    chatProvider.sendMessage(
+                        'workspace_id', 'channel_id', content);
+                  },
+                ),
               ],
             );
           }),

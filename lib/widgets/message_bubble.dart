@@ -62,26 +62,38 @@ class MessageBubble extends StatelessWidget {
                     color: message.isSelf ? Colors.blue : Colors.grey[300],
                     borderRadius: BorderRadius.circular(12.0),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Html(data: message.content),
-                      // Show reactions if they exist
-                      if (message.reactions.isNotEmpty)
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          children: message.reactions.map((entry) {
-                            return Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 4.0),
-                              child: Text(
-                                "${entry.emoji}: ${entry.reactedToBy.length}",
-                                style: GoogleFonts.notoColorEmoji(fontSize: 12),
-                              ),
-                            );
-                          }).toList(),
+                  child: Padding(
+                    padding: const EdgeInsets.all(2),
+                    child: Html(data: message.content),
+                  ),
+                ),
+              if (message.reactions.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 5.0),
+                  child: Row(
+                    children: message.reactions.map((reaction) {
+                      return Container(
+                        padding: const EdgeInsets.all(6.0),
+                        // margin: const EdgeInsets.only(right: 8.0),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[800],
+                          borderRadius: BorderRadius.circular(15),
                         ),
-                    ],
+                        child: Row(
+                          children: [
+                            Text(reaction.emoji,
+                                style:
+                                    GoogleFonts.notoColorEmoji(fontSize: 14)),
+                            const SizedBox(width: 8.0),
+                            Text(
+                              '${reaction.reactedToBy.length}',
+                              style: const TextStyle(
+                                  fontSize: 14.0, color: Colors.white60),
+                            )
+                          ],
+                        ),
+                      );
+                    }).toList(),
                   ),
                 ),
               if (message.type == 'date')

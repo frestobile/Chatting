@@ -26,7 +26,7 @@ class Message {
       this.sender,
       required this.content,
       required this.organisation,
-      required this.channel,
+      this.channel = '',
       this.conversation = '',
       required this.collaborators,
       required this.threadReplies,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/channel_model.dart';
 import '../models/coworker_model.dart';
 import '../models/conversation_model.dart';
@@ -12,14 +13,19 @@ class HomeProvider with ChangeNotifier {
   List<Conversation> _conversations = [];
   bool _isLoading = false;
   String? _errorMessage;
-  bool _isApiCalled = false;
+  Coworker? _profileUser;
+  // Channel? _channelData;
+  // Conversation? _convData;
 
   List<Channel> get channels => _channels;
   List<Coworker> get coworkers => _coworkers;
   List<Conversation> get conversations => _conversations;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
-  bool get isApiCalled => _isApiCalled;
+
+  Coworker? get profileUser => _profileUser;
+  // Channel? get channelData => _channelData;
+  // Conversation? get convData => _convData;
 
   Future<void> fetchWorkspaceDetails(String workspaceId) async {
     _isLoading = true;
@@ -41,6 +47,10 @@ class HomeProvider with ChangeNotifier {
         _conversations = conversationjsonMap
             .map((conversation) => Conversation.fromJson(conversation))
             .toList();
+        Map<String, dynamic> profileJson =
+            json.decode(response['data'])['data']['profile'];
+        _profileUser = Coworker.fromJson(profileJson);
+        _saveUserToPrefs(_profileUser!);
       } else {
         _errorMessage = response['msg'];
       }
@@ -48,8 +58,26 @@ class HomeProvider with ChangeNotifier {
       _errorMessage = "An error occurred: $error";
     } finally {
       _isLoading = false;
-      _isApiCalled = true;
       notifyListeners();
     }
+  }
+
+  Future<void> _saveUserToPrefs(Coworker user) async {
+    final prefs = await SharedPreferences.getInstance();
+    String userJson = jsonEncode(user.toJson());
+    await prefs.setString('profile_data', userJson);
+  }
+
+  Future<Coworker?> loadUserFromPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    String? userJson = prefs.getString('profile_data');
+
+    if (userJson != null) {
+      Map<String, dynamic> userMap = jsonDecode(userJson);
+      notifyListeners();
+      return Coworker.fromJson(userMap);
+    }
+    return null;
   }
 }

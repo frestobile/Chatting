@@ -2,18 +2,66 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:ainaglam/providers/auth_provider.dart';
-import '../models/message_model.dart';
-import '../models/user_model.dart';
+import 'package:ainaglam/providers/home_provider.dart';
+import 'package:ainaglam/models/message_model.dart';
+import 'package:ainaglam/models/user_model.dart';
+import 'package:ainaglam/models/coworker_model.dart';
 
 class ChatService {
   final String _baseUrl = dotenv.env['API_BASE_URL'] ?? '';
   final AuthProvider _authProvider = AuthProvider();
+  final HomeProvider _homeProvider = HomeProvider();
 
-  Future<Map<String, dynamic>> fetchConversationData(
+  Future<Map<String, dynamic>> fetchConversationMessages(
       String workspaceId, String conversationId) async {
-    User? userData = await _authProvider.loadUserFromPrefs();
+    User? userData = await _authProvider.loadAuthData();
+    Coworker? user = await _homeProvider.loadUserFromPrefs();
     final response = await http.get(
-      Uri.parse('$_baseUrl/conversations/$conversationId'),
+      Uri.parse(
+          '$_baseUrl/messages?conversation=$conversationId&organisation=$workspaceId'),
+      headers: {'Authorization': 'Bearer ${userData?.token}'},
+    );
+
+    if (response.statusCode == 201) {
+      return {'success': true, 'msg': '', 'data': response.body, 'user': user};
+    } else {
+      return {
+        'success': false,
+        'msg': 'Failed to fetch messages',
+        'data': response.body
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>> fetchChannelMessages(
+      String workspaceId, String channelId) async {
+    User? userData = await _authProvider.loadAuthData();
+    Coworker? user = await _homeProvider.loadUserFromPrefs();
+    final response = await http.get(
+      Uri.parse(
+          '$_baseUrl/messages?channelId=$channelId&organisation=$workspaceId'),
+      headers: {'Authorization': 'Bearer ${userData?.token}'},
+    );
+    if (response.statusCode == 201) {
+      return {
+        "success": true,
+        "msg": "Fetched data",
+        "data": response.body,
+        'user': user
+      };
+    } else {
+      return {
+        "success": false,
+        "msg": "Failed to fetch data with status: ${response.statusCode}",
+        "data": null
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>> fetchChannelData(String channelId) async {
+    User? userData = await _authProvider.loadAuthData();
+    final response = await http.get(
+      Uri.parse('$_baseUrl/channel/$channelId'),
       headers: {'Authorization': 'Bearer ${userData?.token}'},
     );
 
@@ -28,12 +76,11 @@ class ChatService {
     }
   }
 
-  Future<Map<String, dynamic>> fetchConversationMessages(
-      String workspaceId, String conversationId) async {
-    User? userData = await _authProvider.loadUserFromPrefs();
+  Future<Map<String, dynamic>> fetchConversationData(
+      String conversationId) async {
+    User? userData = await _authProvider.loadAuthData();
     final response = await http.get(
-      Uri.parse(
-          '$_baseUrl/messages?conversation=$conversationId&organisation=$workspaceId'),
+      Uri.parse('$_baseUrl/conversations/$conversationId'),
       headers: {'Authorization': 'Bearer ${userData?.token}'},
     );
 
@@ -41,48 +88,9 @@ class ChatService {
       return {'success': true, 'msg': '', 'data': response.body};
     } else {
       return {
-        'success': true,
+        'success': false,
         'msg': 'Failed to load messages',
         'data': response.body
-      };
-    }
-  }
-
-  Future<Map<String, dynamic>> fetchChannelData(
-      String workspaceId, String conversationId) async {
-    User? userData = await _authProvider.loadUserFromPrefs();
-    final response = await http.get(
-      Uri.parse(
-          '$_baseUrl/workspaces/$workspaceId/channels/$conversationId/messages'),
-      headers: {'Authorization': 'Bearer ${userData?.token}'},
-    );
-
-    if (response.statusCode == 200) {
-      return {'success': true, 'msg': '', 'data': response.body};
-    } else {
-      return {
-        'success': true,
-        'msg': 'Failed to load messages',
-        'data': response.body
-      };
-    }
-  }
-
-  Future<Map<String, dynamic>> fetchChannelMessages(
-      String workspaceId, String channelId) async {
-    User? userData = await _authProvider.loadUserFromPrefs();
-    final response = await http.get(
-      Uri.parse(
-          '$_baseUrl/messages?channelId=$channelId&organisation=$workspaceId'),
-      headers: {'Authorization': 'Bearer ${userData?.token}'},
-    );
-    if (response.statusCode == 201) {
-      return {"success": true, "msg": "Fetched data", "data": response.body};
-    } else {
-      return {
-        "success": false,
-        "msg": "Failed to fetch data with status: ${response.statusCode}",
-        "data": null
       };
     }
   }

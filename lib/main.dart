@@ -5,6 +5,7 @@ import 'package:ainaglam/providers/workspace_provider.dart';
 import 'package:ainaglam/providers/auth_provider.dart';
 import 'package:ainaglam/providers/home_provider.dart';
 import 'package:ainaglam/providers/chat_provider.dart';
+import 'package:ainaglam/providers/thread_provider.dart';
 import 'package:ainaglam/screens/auth/splash.dart';
 
 void main() async {
@@ -16,6 +17,7 @@ void main() async {
             create: (_) => WorkspaceProvider()),
         ChangeNotifierProvider<HomeProvider>(create: (_) => HomeProvider()),
         ChangeNotifierProvider<ChatProvider>(create: (_) => ChatProvider()),
+        ChangeNotifierProvider<ThreadProvider>(create: (_) => ThreadProvider()),
       ],
       child: const MyApp(),
     ),

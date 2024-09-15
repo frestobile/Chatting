@@ -10,14 +10,10 @@ class WorkspaceProvider with ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
 
-  bool _isApiCalled = false;
-
   List<Workspace> get workspaces => _workspaces;
   Workspace? get selectedWorkspace => _selectedWorkspace;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
-
-  bool get isApiCalled => _isApiCalled;
 
   Future<void> fetchWorkspaces(String token) async {
     _isLoading = true; // Start loading
@@ -29,7 +25,6 @@ class WorkspaceProvider with ChangeNotifier {
         List<dynamic> jsonMap = json.decode(response['data'])['data'];
 
         _workspaces = jsonMap.map((org) => Workspace.fromJson(org)).toList();
-        _isApiCalled = true;
       } else {
         _errorMessage = "Failed to load data.";
       }
@@ -39,10 +34,5 @@ class WorkspaceProvider with ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
-  }
-
-  void selectWorkspace(Workspace workspace) {
-    _selectedWorkspace = workspace;
-    notifyListeners();
   }
 }

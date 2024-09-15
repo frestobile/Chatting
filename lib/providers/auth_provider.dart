@@ -70,7 +70,7 @@ class AuthProvider with ChangeNotifier {
         Map<String, dynamic> jsonMap = response['data'];
         Map<String, dynamic> data = jsonMap['data'];
         _user = User.fromJson(data);
-        await _saveUserToPrefs(_user!);
+        await _saveAuthData(_user!);
         _token = _user?.token;
         _status = response['success'];
       } else {
@@ -91,13 +91,13 @@ class AuthProvider with ChangeNotifier {
     await prefs.remove('user'); // Clear user session
   }
 
-  Future<void> _saveUserToPrefs(User user) async {
+  Future<void> _saveAuthData(User user) async {
     final prefs = await SharedPreferences.getInstance();
     String userJson = jsonEncode(user.toJson());
     await prefs.setString('user_data', userJson);
   }
 
-  Future<User?> loadUserFromPrefs() async {
+  Future<User?> loadAuthData() async {
     final prefs = await SharedPreferences.getInstance();
 
     String? userJson = prefs.getString('user_data');

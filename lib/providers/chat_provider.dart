@@ -1,39 +1,47 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:socket_io_client/socket_io_client.dart';
+import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:ainaglam/models/message_model.dart';
+import '../models/channel_model.dart';
+import '../models/coworker_model.dart';
+import 'package:ainaglam/models/reaction_model.dart';
+import '../models/conversation_model.dart';
 import 'package:ainaglam/services/chat_service.dart';
+import 'package:uuid/uuid.dart';
+import 'package:intl/intl.dart';
 
 class ChatProvider with ChangeNotifier {
   final ChatService _chatService = ChatService();
-  late Socket? _socket;
-
-  // final String workspaceId;
-  // final String channelId;
-  // final WebSocketChannel _channel;
+  late IO.Socket? _socket;
 
   List<Message> _messages = [];
-  final List<Message> _threadMessages = [];
+  Message? _selectedMessage;
   bool _isLoading = false;
-  bool _isApiCalled = false;
+
   String? _errorMessage;
   String? _currentMessageId;
-  bool _isChannel = true;
+  Coworker? _user;
+  Channel? _channelData;
+  Conversation? _convData;
 
   List<Message> get messages => _messages;
-  List<Message> get threadMessages => _threadMessages;
+  Message? get selectedMessage => _selectedMessage;
   bool get isLoading => _isLoading;
-  bool get isApiCalled => _isApiCalled;
+
   String? get errorMessage => _errorMessage;
   String? get currentMessageId => _currentMessageId;
-  bool get isChannel => _isChannel;
-
+  Coworker? get user => _user;
+  Channel? get channelData => _channelData;
+  Conversation? get convData => _convData;
   // connect to Socket.IO server
   void connect() {
-    _socket = io(dotenv.env['API_BASE_URL']);
+    _socket = IO.io(
+        dotenv.env['API_PUBLIC_SOCKET'],
+        IO.OptionBuilder()
+            .setTransports(['websocket'])
+            .disableAutoConnect()
+            .build());
 
     _socket!.connect();
 
@@ -43,8 +51,22 @@ class ChatProvider with ChangeNotifier {
 
     // Listen for messages from the server
     _socket!.on('message', (data) {
-      _messages.add(data);
+      Message receivedMessage = Message.fromJson(data['newMessage']);
+      _messages.add(receivedMessage);
       notifyListeners(); // Notify UI about the new message
+    });
+    _socket!.on('message-updated', (data) {
+      if (data['isThread'] == false) {
+        Message msg = Message.fromJson(data['message']);
+        int index = _messages.indexWhere((item) => item.id == data['id']);
+        _messages[index] = msg;
+      }
+      notifyListeners();
+    });
+
+    _socket!.on('message-delete', (data) {
+      _messages.removeWhere((item) => item.id == data['messageId']);
+      notifyListeners();
     });
 
     _socket!.onDisconnect((_) {
@@ -52,11 +74,41 @@ class ChatProvider with ChangeNotifier {
     });
   }
 
-  void _onMessageReceived(dynamic message) {
-    final decodedMessage = jsonDecode(message);
-    final newMessage = Message.fromJson(decodedMessage);
-    _messages.add(newMessage);
+  Future<void> fetchChannelData(String channelId) async {
+    _isLoading = true;
     notifyListeners();
+    try {
+      final response = await _chatService.fetchChannelData(channelId);
+      if (response['success'] == true) {
+        Map<String, dynamic> channelJson =
+            json.decode(response['data'])['data'];
+        _channelData = Channel.fromJson(channelJson);
+        // print(channelData!.title);
+      }
+    } catch (error) {
+      _errorMessage = "An error occurred: $error";
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchConversationData(String conversationlId) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final response =
+          await _chatService.fetchConversationData(conversationlId);
+      if (response['success'] == true) {
+        Map<String, dynamic> convJson = json.decode(response['data'])['data'];
+        _convData = Conversation.fromJson(convJson);
+      }
+    } catch (error) {
+      _errorMessage = "An error occurred: $error";
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
   Future<void> fetchChannelMessages(
@@ -71,18 +123,18 @@ class ChatProvider with ChangeNotifier {
         List<dynamic> jsonMap = json.decode(response['data'])['data'];
 
         _messages = jsonMap.map((msg) => Message.fromJson(msg)).toList();
+
+        _user = response['user'];
+        print(_user!.displayName);
       } else {
         _errorMessage = response['msg'];
       }
     } catch (error) {
       _errorMessage = "An error occurred: $error";
     } finally {
-      _isChannel = true;
-      _isApiCalled = true;
       _isLoading = false;
       notifyListeners();
     }
-    _isApiCalled = false;
   }
 
   Future<void> fetchConversationMessages(
@@ -91,23 +143,22 @@ class ChatProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      final response =
-          await _chatService.fetchConversationMessages(workspaceId, conversationlId);
+      final response = await _chatService.fetchConversationMessages(
+          workspaceId, conversationlId);
       if (response['success'] == true) {
         List<dynamic> jsonMap = json.decode(response['data'])['data'];
         _messages = jsonMap.map((msg) => Message.fromJson(msg)).toList();
+        _user = response['user'];
+        // print(_user!.displayName);
       } else {
         _errorMessage = response['msg'];
       }
     } catch (error) {
       _errorMessage = "An error occurred: $error";
     } finally {
-      _isChannel = false;
-      _isApiCalled = true;
       _isLoading = false;
       notifyListeners();
     }
-    _isApiCalled = false;
   }
 
   void setCurrentMessageId(String? id) {
@@ -116,50 +167,55 @@ class ChatProvider with ChangeNotifier {
   }
 
   Future<void> deleteMessage(Message message) async {
+    _socket?.emit('message-delete', {
+      'channelId': message.channel,
+      'messageId': message.id,
+      'userId': user!.id,
+      'isThread': false
+    });
+    _messages.remove(message);
     notifyListeners();
   }
 
-  Future<void> sendMessage(
-      String workspaceId, String channelId, String content) async {
-    final newMessage =
-        await _chatService.sendMessage(workspaceId, channelId, content);
-    _messages.add(newMessage);
+  Future<void> sendMessage(String workspaceId, String channelId,
+      Map<String, dynamic> message, bool isChannel) async {
+    final msg = {
+      'message': message,
+      'organisation': workspaceId,
+      'hasNotOpen': isChannel
+          ? channelData!.collaborators.where((c) => c.id != user!.id).toList()
+          : convData!.collaborators.where((c) => c.id != user!.id).toList(),
+      'isPublic': isChannel ? true : false
+    };
+    print(msg['hasNotOpen']);
+    if (isChannel == true) {
+      msg['channelId'] = channelId;
+      msg['channelName'] = channelData!.name;
+      msg['collaborators'] = channelData!.collaborators;
+    } else {
+      msg['conversationId'] = channelId;
+      msg['collaborators'] = convData!.collaborators;
+      msg['isSelf'] =
+          convData!.collaborators[0].id == convData!.collaborators[1].id;
+    }
+    _socket?.emit('message', msg);
     notifyListeners();
   }
 
-  // void sendMessages(String content) {
-  //   final message = jsonEncode({
-  //     'type': 'message',
-  //     'workspace_id': workspaceId,
-  //     'channel_id': channelId,
-  //     'content': content,
-  //     'sender_id': 'currentUserId', // Replace with actual user ID
-  //     'timestamp': DateTime.now().toIso8601String(),
-  //   });
-  //   _channel.sink.add(message);
-  // }
-
-  Future <void> addEmojiReaction(String messageId, String emoji) async {
-    // Implement emoji reaction logic
+  Future<void> addEmojiReaction(Message message, String emoji) async {
+    _selectedMessage = message;
+    _socket?.emit('reaction', {
+      'emoji': emoji,
+      'id': message.id,
+      'userId': user!.id,
+      'isThread': false
+    });
     notifyListeners();
   }
 
-  // // void openThread(String parentMessageId) {
-  // //   _threadMessages =
-  // //       _messages.where((msg) => msg. == parentMessageId).toList();
-  // //   notifyListeners();
-  // // }
-
-  Future<void> replyToThread(String parentMessageId, String content) async {
-    final newMessage =
-        await _chatService.replyToThread(parentMessageId, content);
-    _threadMessages.add(newMessage);
-    notifyListeners();
+  @override
+  void dispose() {
+    _socket!.disconnect();
+    super.dispose();
   }
-
-  // @override
-  // void dispose() {
-  //   _channel.sink.close();
-  //   super.dispose();
-  // }
 }

@@ -6,14 +6,12 @@ class LabeledTextButton extends StatelessWidget {
     required this.label,
     required this.action,
     required this.onTap,
-    required this.style,
     super.key,
   });
 
   final String label;
   final String action;
   final VoidCallback onTap;
-  final TextStyle style;
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +25,10 @@ class LabeledTextButton extends StatelessWidget {
           children: [
             TextSpan(
               text: action,
-              style: style,
+              style: context.textTheme.labelLarge!.copyWith(
+                color: context.colorScheme.primary,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ],
         ),

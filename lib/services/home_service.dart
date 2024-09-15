@@ -1,9 +1,7 @@
-import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:ainaglam/providers/auth_provider.dart';
 import '../models/user_model.dart';
-import '../models/coworker_model.dart';
 
 class HomeService {
   final String _baseUrl = dotenv.env['API_BASE_URL'] ?? '';

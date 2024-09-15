@@ -1,9 +1,8 @@
+import 'package:uuid/uuid.dart';
 import 'package:ainaglam/screens/home/thread_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_quill/flutter_quill.dart' as quill;
 
 import 'package:ainaglam/models/message_model.dart';
 import 'package:ainaglam/providers/chat_provider.dart';
@@ -12,16 +11,16 @@ import 'package:ainaglam/widgets/message_bubble.dart';
 class ChatScreen extends StatefulWidget {
   final String workspaceId;
   final String channelId;
-  final String title;
   final bool isPrivateChat;
+  final String title;
   final String avatar;
   const ChatScreen({
     super.key,
     required this.workspaceId,
     required this.channelId,
+    this.isPrivateChat = false,
     required this.title,
     this.avatar = '',
-    this.isPrivateChat = false,
   });
 
   @override
@@ -30,19 +29,20 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   OverlayEntry? _overlayEntry;
-  final quill.QuillController _quillController = quill.QuillController.basic();
+  final ScrollController _scrollController = ScrollController();
   final TextEditingController _messageController = TextEditingController();
-
+  ChatProvider chatProvider = ChatProvider();
   String organisationId = '';
   String channelId = '';
   String title = '';
   String avatar = '';
   bool isChannel = true;
 
-  List<Message> messages = [];
   @override
   void initState() {
     super.initState();
+    if (mounted) {}
+    chatProvider = Provider.of<ChatProvider>(context, listen: false);
     setState(() {
       organisationId = widget.workspaceId;
       channelId = widget.channelId;
@@ -50,25 +50,32 @@ class _ChatScreenState extends State<ChatScreen> {
       avatar = widget.avatar;
       isChannel = !widget.isPrivateChat;
     });
-    // Call the provider to fetch messages
+    // organisationId = widget.workspaceId;
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      ChatProvider chatProvider =
-          Provider.of<ChatProvider>(context, listen: false);
       if (widget.isPrivateChat) {
         await chatProvider.fetchConversationMessages(
             widget.workspaceId, widget.channelId);
+        await chatProvider.fetchConversationData(channelId);
+        channelId = widget.channelId;
       } else {
         await chatProvider.fetchChannelMessages(
             widget.workspaceId, widget.channelId);
+        await chatProvider.fetchChannelData(channelId);
+        channelId = widget.channelId;
       }
     });
-    // Provider.of<ChatProvider>(context, listen: false).connect();
+    _scrollToBottom();
+    if (mounted) {
+      chatProvider.connect();
+    }
   }
 
   @override
   void dispose() {
     _removeReactionPanel();
+    _scrollController.dispose();
     _messageController.dispose();
+    // chatProvider.dispose();
     super.dispose();
   }
 
@@ -101,8 +108,9 @@ class _ChatScreenState extends State<ChatScreen> {
                     _removeReactionPanel();
                     _handleReaction(context, message, '👍');
                   },
-                  child: Text('👍',
-                      style: GoogleFonts.notoColorEmoji(fontSize: 24)),
+                  child: const Text('👍',
+                      style: TextStyle(
+                          fontFamily: 'NotoColorEmoji', fontSize: 20)),
                 ),
                 const SizedBox(width: 10),
                 GestureDetector(
@@ -110,8 +118,9 @@ class _ChatScreenState extends State<ChatScreen> {
                     _removeReactionPanel();
                     _handleReaction(context, message, '✅');
                   },
-                  child: Text('✅',
-                      style: GoogleFonts.notoColorEmoji(fontSize: 24)),
+                  child: const Text('✅',
+                      style: TextStyle(
+                          fontFamily: 'NotoColorEmoji', fontSize: 20)),
                 ),
                 const SizedBox(width: 10),
                 GestureDetector(
@@ -119,8 +128,9 @@ class _ChatScreenState extends State<ChatScreen> {
                     _removeReactionPanel();
                     _handleReaction(context, message, '👀');
                   },
-                  child: Text('👀',
-                      style: GoogleFonts.notoColorEmoji(fontSize: 24)),
+                  child: const Text('👀',
+                      style: TextStyle(
+                          fontFamily: 'NotoColorEmoji', fontSize: 20)),
                 ),
                 const SizedBox(width: 10),
                 GestureDetector(
@@ -128,28 +138,35 @@ class _ChatScreenState extends State<ChatScreen> {
                     _removeReactionPanel();
                     _handleReaction(context, message, '💖');
                   },
-                  child: Text('💖',
-                      style: GoogleFonts.notoColorEmoji(fontSize: 24)),
+                  child: const Text('💖',
+                      style: TextStyle(
+                          fontFamily: 'NotoColorEmoji', fontSize: 20)),
                 ),
                 const SizedBox(width: 10),
                 GestureDetector(
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          ThreadScreen(parentMessage: message),
-                    ),
-                  ),
-                  child: const Icon(Icons.reply),
+                  onTap: () {
+                    _removeReactionPanel();
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => ThreadScreen(
+                            message: message, user: chatProvider.user!),
+                      ),
+                    );
+                  },
+                  child: const Icon(Icons.reply, color: Colors.white),
                 ),
                 const SizedBox(width: 10),
-                GestureDetector(
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Delete clicked')),
-                      );
-                      //  confirm dialog
-                    },
-                    child: const Icon(Icons.delete)),
+                if (chatProvider.user!.id == message.sender!.id)
+                  GestureDetector(
+                      onTap: () {
+                        // ScaffoldMessenger.of(context).showSnackBar(
+                        //   const SnackBar(content: Text('Delete clicked')),
+                        // );
+                        _removeReactionPanel();
+                        chatProvider.deleteMessage(message);
+                        //  confirm dialog
+                      },
+                      child: const Icon(Icons.delete, color: Colors.white)),
               ],
             ),
           ),
@@ -165,30 +182,64 @@ class _ChatScreenState extends State<ChatScreen> {
   void _removeReactionPanel() {
     _overlayEntry?.remove();
     _overlayEntry = null;
-    Provider.of<ChatProvider>(context, listen: false).setCurrentMessageId(null);
+    chatProvider.setCurrentMessageId(null);
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: isChannel
-            ? AppBar(title: Text(title))
-            : AppBar(
-                title: Text(title),
-                leading: avatar != ''
-                    ? CircleAvatar(
-                        radius: 40,
-                        backgroundImage: NetworkImage(
-                            '${dotenv.env['API_BASE_URL']}/static/avatar/$avatar'),
-                      )
-                    : CircleAvatar(
-                        radius: 40,
-                        backgroundImage:
-                            RegExp(r'^[a-z]$').hasMatch(title.toLowerCase())
-                                ? AssetImage(
-                                    'avatars/${title[0].toLowerCase()}.png')
-                                : const AssetImage('avatars/default.png'),
+            ? AppBar(
+                actions: [
+                  Row(
+                    children: [
+                      Text(
+                        title.toUpperCase(),
+                        style: const TextStyle(fontSize: 18),
                       ),
+                      const SizedBox(width: 25),
+                    ],
+                  ),
+                ],
+              )
+            : AppBar(
+                actions: [
+                  Row(
+                    children: [
+                      avatar != ''
+                          ? CircleAvatar(
+                              radius: 20,
+                              backgroundImage: NetworkImage(
+                                  '${dotenv.env['API_BASE_URL']}/static/avatar/$avatar'),
+                            )
+                          : CircleAvatar(
+                              radius: 20,
+                              backgroundImage: RegExp(r'^[a-z]$')
+                                      .hasMatch(title[0].toLowerCase())
+                                  ? AssetImage('avatars/${title[0]}.png')
+                                  : const AssetImage('avatars/default.png'),
+                            ),
+                      const SizedBox(width: 10),
+                      Text(
+                        title.toUpperCase(),
+                        style: const TextStyle(fontSize: 18),
+                      ),
+                      const SizedBox(width: 25),
+                    ],
+                  ),
+                ],
               ),
         body: GestureDetector(
           onTap: () {
@@ -206,26 +257,38 @@ class _ChatScreenState extends State<ChatScreen> {
               return Center(
                   child: Text(chatProvider.errorMessage!)); // Handle errors
             }
-
             return Column(
               children: [
                 Expanded(
                   child: ListView.builder(
+                    controller: _scrollController,
                     itemCount: chatProvider.messages.length,
                     itemBuilder: (context, index) {
                       final message = chatProvider.messages[index];
                       final GlobalKey key = GlobalKey();
                       return GestureDetector(
-                          key: key,
-                          onTap: () {
+                        key: key,
+                        onTap: () {
+                          if (message.type != 'date') {
                             if (chatProvider.currentMessageId != message.id) {
                               _showReactionPanel(context, key, message);
                             }
+                          }
+                        },
+                        child: MessageBubble(
+                          message: message,
+                          user: chatProvider.user!,
+                          onReply: () {
+                            _removeReactionPanel();
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => ThreadScreen(
+                                    message: message, user: chatProvider.user!),
+                              ),
+                            );
                           },
-                          child: MessageBubble(
-                            message: message,
-                            user: chatProvider.user!,
-                          ));
+                        ),
+                      );
                     },
                   ),
                 ),
@@ -244,18 +307,26 @@ class _ChatScreenState extends State<ChatScreen> {
           Expanded(
             child: TextField(
               controller: _messageController,
-              decoration: const InputDecoration(
-                hintText: 'Message #development',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                hintText: 'Message #$title',
+                border: const OutlineInputBorder(),
               ),
             ),
           ),
           IconButton(
             icon: const Icon(Icons.send),
             onPressed: () {
-              chatProvider.sendMessage(
-                  organisationId, channelId, _messageController.text);
-              _messageController.clear(); // Clear the input field
+              if (_messageController.text.trim().isNotEmpty) {
+                // var uuid = Uuid();
+                final newMsg = {
+                  "sender": chatProvider.user!,
+                  "content": _messageController.text
+                };
+                chatProvider.sendMessage(
+                    organisationId, channelId, newMsg, isChannel);
+                _messageController.clear(); // Clear the input field
+                _scrollToBottom();
+              }
             },
           ),
         ],
@@ -263,67 +334,8 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  Widget _buildEditorToolbar() {
-    return quill.QuillToolbar.simple(
-      controller: _quillController,
-      // multiRowsDisplay: false, // You can enable multi-rows display if necessary
-    );
-  }
-
-  // The rich text editor
-  Widget _buildEditor() {
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Container(
-        height: 150, // Adjust as needed for your UI
-        decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: quill.QuillEditor(
-          controller: _quillController,
-          scrollController: ScrollController(),
-          // scrollable: true,
-          focusNode: FocusNode(),
-          // autoFocus: false,
-          // readOnly: false, // False so users can edit
-          // expands: false,
-          // padding: EdgeInsets.all(10),
-          // keyboardAppearance: Brightness.light,
-        ),
-      ),
-    );
-  }
-
-  // Send button to handle message sending
-  Widget _buildSendButton() {
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Row(
-        children: [
-          Expanded(
-            child: ElevatedButton(
-              onPressed: () {
-                // Extract and print the rich text document content
-                final doc = _quillController.document;
-                final delta = doc.toDelta().toJson();
-                print('Message content (Delta): $delta');
-
-                // You can send this delta format to the server or convert it to plain text
-                // Then clear the editor for the next input
-                _quillController.clear();
-              },
-              child: const Text('Send'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _handleReaction(BuildContext context, Message message, String emoji) {
-    final chatProvider = Provider.of<ChatProvider>(context, listen: false);
-    chatProvider.addEmojiReaction(message.id, emoji);
+    chatProvider.addEmojiReaction(message, emoji);
     // Navigator.pop(context);
   }
 

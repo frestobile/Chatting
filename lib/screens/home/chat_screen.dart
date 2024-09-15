@@ -1,27 +1,26 @@
+// import 'package:ainaglam/providers/home_provider.dart';
+import 'package:ainaglam/screens/home/thread_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_html/flutter_html.dart';
+
 import 'package:ainaglam/models/message_model.dart';
 import 'package:ainaglam/providers/chat_provider.dart';
-
-import 'package:ainaglam/models/channel_model.dart';
-import 'package:ainaglam/models/coworker_model.dart';
-import 'package:ainaglam/screens/home/thread_screen.dart';
-
-import 'package:ainaglam/widgets/message_input_widget.dart';
-import 'package:ainaglam/widgets/emoji_reaction_widget.dart';
+import 'package:ainaglam/widgets/message_bubble.dart';
 
 class ChatScreen extends StatefulWidget {
   final String workspaceId;
   final String channelId;
   final bool isPrivateChat;
-
-  const ChatScreen({super.key, 
+  final String title;
+  final String avatar;
+  const ChatScreen({
+    super.key,
     required this.workspaceId,
     required this.channelId,
     this.isPrivateChat = false,
+    required this.title,
+    this.avatar = '',
   });
 
   @override
@@ -29,17 +28,167 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
+  OverlayEntry? _overlayEntry;
+  final ScrollController _scrollController = ScrollController();
+  final TextEditingController _messageController = TextEditingController();
+  ChatProvider chatProvider = ChatProvider();
+  String organisationId = '';
+  String channelId = '';
+  String title = '';
+  String avatar = '';
+  bool isChannel = true;
+
   @override
   void initState() {
     super.initState();
-    // Call the provider to fetch messages
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    if (mounted) {}
+    chatProvider = Provider.of<ChatProvider>(context, listen: false);
+    setState(() {
+      organisationId = widget.workspaceId;
+      channelId = widget.channelId;
+      title = widget.title;
+      avatar = widget.avatar;
+      isChannel = !widget.isPrivateChat;
+    });
+    // organisationId = widget.workspaceId;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (widget.isPrivateChat) {
-        Provider.of<ChatProvider>(context, listen: false)
-            .fetchConversationMessages(widget.workspaceId, widget.channelId);
+        await chatProvider.fetchConversationMessages(
+            widget.workspaceId, widget.channelId);
+        channelId = widget.channelId;
       } else {
-        Provider.of<ChatProvider>(context, listen: false)
-            .fetchChannelMessages(widget.workspaceId, widget.channelId);
+        await chatProvider.fetchChannelMessages(
+            widget.workspaceId, widget.channelId);
+        channelId = widget.channelId;
+      }
+    });
+    _scrollToBottom();
+    if (mounted) {
+      chatProvider.connect();
+    }
+  }
+
+  @override
+  void dispose() {
+    _removeReactionPanel();
+    _scrollController.dispose();
+    _messageController.dispose();
+    // chatProvider.dispose();
+    super.dispose();
+  }
+
+  // Function to show the reaction panel
+  void _showReactionPanel(
+      BuildContext context, GlobalKey key, Message message) {
+    _removeReactionPanel();
+
+    final renderBox = key.currentContext!.findRenderObject() as RenderBox;
+    final size = renderBox.size;
+    final offset = renderBox.localToGlobal(Offset.zero);
+
+    _overlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        right: offset.dx + size.width / 2 - 180, // Adjust tooltip position
+        top: offset.dy - 10, // Positioning the tooltip above the message
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+            decoration: BoxDecoration(
+              color: const Color.fromARGB(196, 1, 1, 1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                GestureDetector(
+                  onTap: () {
+                    _removeReactionPanel();
+                    _handleReaction(context, message, '👍');
+                  },
+                  child: const Text('👍',
+                      style: TextStyle(
+                          fontFamily: 'NotoColorEmoji', fontSize: 20)),
+                ),
+                const SizedBox(width: 10),
+                GestureDetector(
+                  onTap: () {
+                    _removeReactionPanel();
+                    _handleReaction(context, message, '✅');
+                  },
+                  child: const Text('✅',
+                      style: TextStyle(
+                          fontFamily: 'NotoColorEmoji', fontSize: 20)),
+                ),
+                const SizedBox(width: 10),
+                GestureDetector(
+                  onTap: () {
+                    _removeReactionPanel();
+                    _handleReaction(context, message, '👀');
+                  },
+                  child: const Text('👀',
+                      style: TextStyle(
+                          fontFamily: 'NotoColorEmoji', fontSize: 20)),
+                ),
+                const SizedBox(width: 10),
+                GestureDetector(
+                  onTap: () {
+                    _removeReactionPanel();
+                    _handleReaction(context, message, '💖');
+                  },
+                  child: const Text('💖',
+                      style: TextStyle(
+                          fontFamily: 'NotoColorEmoji', fontSize: 20)),
+                ),
+                const SizedBox(width: 10),
+                GestureDetector(
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => ThreadScreen(
+                          message: message, user: chatProvider.user!),
+                    ),
+                  ),
+                  child: const Icon(Icons.reply, color: Colors.white),
+                ),
+                const SizedBox(width: 10),
+                if (chatProvider.user!.id == message.sender!.id)
+                  GestureDetector(
+                      onTap: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Delete clicked')),
+                        );
+                        //  confirm dialog
+                      },
+                      child: const Icon(Icons.delete, color: Colors.white)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    Overlay.of(context).insert(_overlayEntry!);
+    Provider.of<ChatProvider>(context, listen: false)
+        .setCurrentMessageId(message.id);
+  }
+
+  // Function to remove the reaction panel
+  void _removeReactionPanel() {
+    if (_overlayEntry != null) {
+      _overlayEntry?.remove();
+      _overlayEntry = null;
+    }
+
+    chatProvider.setCurrentMessageId(null);
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
       }
     });
   }
@@ -47,50 +196,103 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('DEVELOPMENT'),
-      ),
-      body: Consumer<ChatProvider>(
-        builder: (context, chatProvider, child) {
-          if (chatProvider.isLoading) {
-            return const Center(
-                child: CircularProgressIndicator()); // Show loading spinner
-          }
-
-          if (chatProvider.errorMessage != null) {
-            return Center(
-                child: Text(chatProvider.errorMessage!)); // Handle errors
-          }
-
-          return Column(
-            children: [
-              Expanded(
-                child: ListView.builder(
-                  itemCount: chatProvider.messages.length,
-                  itemBuilder: (context, index) {
-                    final message = chatProvider.messages[index];
-                    return MessageBubble(
-                      message: message,
-                    );
-                  },
-                ),
+        appBar: isChannel
+            ? AppBar(
+                actions: [
+                  Row(
+                    children: [
+                      Text(
+                        title.toUpperCase(),
+                        style: const TextStyle(fontSize: 18),
+                      ),
+                      const SizedBox(width: 25),
+                    ],
+                  ),
+                ],
+              )
+            : AppBar(
+                actions: [
+                  Row(
+                    children: [
+                      avatar != ''
+                          ? CircleAvatar(
+                              radius: 20,
+                              backgroundImage: NetworkImage(
+                                  '${dotenv.env['API_BASE_URL']}/static/avatar/$avatar'),
+                            )
+                          : CircleAvatar(
+                              radius: 20,
+                              backgroundImage: RegExp(r'^[a-z]$')
+                                      .hasMatch(title[0].toLowerCase())
+                                  ? AssetImage('avatars/${title[0]}.png')
+                                  : const AssetImage('avatars/default.png'),
+                            ),
+                      const SizedBox(width: 10),
+                      Text(
+                        title.toUpperCase(),
+                        style: const TextStyle(fontSize: 18),
+                      ),
+                      const SizedBox(width: 25),
+                    ],
+                  ),
+                ],
               ),
-              _buildMessageInput(),
-            ],
-          );
-        },
-      ),
-    );
+        body: GestureDetector(
+          onTap: () {
+            if (_overlayEntry != null) {
+              _removeReactionPanel();
+            }
+          },
+          child: Consumer<ChatProvider>(builder: (context, chatProvider, _) {
+            if (chatProvider.isLoading) {
+              return const Center(
+                  child: CircularProgressIndicator()); // Show loading spinner
+            }
+
+            if (chatProvider.errorMessage != null) {
+              return Center(
+                  child: Text(chatProvider.errorMessage!)); // Handle errors
+            }
+            return Column(
+              children: [
+                Expanded(
+                  child: ListView.builder(
+                    controller: _scrollController,
+                    itemCount: chatProvider.messages.length,
+                    itemBuilder: (context, index) {
+                      final message = chatProvider.messages[index];
+                      final GlobalKey key = GlobalKey();
+                      return GestureDetector(
+                          key: key,
+                          onTap: () {
+                            if (chatProvider.currentMessageId != message.id) {
+                              _showReactionPanel(context, key, message);
+                            }
+                          },
+                          child: MessageBubble(
+                            message: message,
+                            user: chatProvider.user!,
+                            onReply: () {},
+                          ));
+                    },
+                  ),
+                ),
+                _buildMessageInput(chatProvider)
+              ],
+            );
+          }),
+        ));
   }
 
-  Widget _buildMessageInput() {
+  Widget _buildMessageInput(ChatProvider chatProvider) {
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: Row(
         children: [
-          const Expanded(
+          Expanded(
             child: TextField(
-              decoration: InputDecoration(
+              controller: _messageController,
+              decoration: const InputDecoration(
                 hintText: 'Message #development',
                 border: OutlineInputBorder(),
               ),
@@ -98,201 +300,27 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.send),
-            onPressed: () {},
+            onPressed: () {
+              // chatProvider.sendMessage(
+              //     organisationId, channelId, _messageController.text);
+              _messageController.clear(); // Clear the input field
+              _scrollToBottom();
+            },
           ),
         ],
       ),
     );
   }
-}
 
-class MessageBubble extends StatelessWidget {
-  final Message message;
-
-  const MessageBubble({super.key, required this.message});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => message.type != 'date'
-          ? _showReactionTooltip(context, message)
-          : () {},
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 5.0, horizontal: 16.0),
-        child: Align(
-            alignment:
-                message.isSelf ? Alignment.centerRight : Alignment.centerLeft,
-            child: Column(
-              children: [
-                if (message.type != 'date')
-                  Row(
-                    // mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      message.sender!.avatarUrl != ''
-                          ? CircleAvatar(
-                              radius: 20,
-                              backgroundImage: NetworkImage(
-                                  '${dotenv.env['API_BASE_URL']}/static/avatar/${message.sender!.avatarUrl}'),
-                            )
-                          : CircleAvatar(
-                              radius: 20,
-                              backgroundImage: RegExp(r'^[a-z]$').hasMatch(
-                                      message.sender!.displayName.toLowerCase())
-                                  ? AssetImage(
-                                      'avatars/${message.sender!.displayName.toLowerCase()}.png')
-                                  : const AssetImage('avatars/default.png'),
-                            ),
-                      const SizedBox(width: 8.0),
-                      Text(
-                        message.sender!.displayName,
-                        style: const TextStyle(
-                            fontSize: 14.0, fontWeight: FontWeight.bold),
-                      ),
-                      const Spacer(),
-                      Text(
-                        DateFormat('hh:mm a')
-                            .format(DateTime.parse(message.createdAt)),
-                        style:
-                            const TextStyle(fontSize: 10.0, color: Colors.grey),
-                      ),
-                    ],
-                  ),
-                if (message.type != 'date')
-                  Container(
-                    margin: const EdgeInsets.only(top: 2.0),
-                    padding: const EdgeInsets.all(8.0),
-                    decoration: BoxDecoration(
-                      color: message.isSelf ? Colors.blue : Colors.grey[300],
-                      borderRadius: BorderRadius.circular(12.0),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Html(data: message.content),
-                        // Show reactions if they exist
-                        if (message.reactions.isNotEmpty)
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            children: message.reactions.map((entry) {
-                              return Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 4.0),
-                                child: Text(
-                                  "${entry.emoji}: ${entry.reactedToBy.length}",
-                                  style: const TextStyle(
-                                      fontSize: 12, color: Colors.black54),
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                      ],
-                    ),
-                  ),
-                if (message.type == 'date')
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 10.0),
-                    child: Row(
-                      children: [
-                        const Expanded(
-                          child: Divider(
-                            color: Colors.grey, // Color of the divider
-                            thickness: 1, // Thickness of the divider
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 10.0),
-                          child: Text(
-                            message.content,
-                            style: const TextStyle(
-                              fontSize: 12, // Font size of the text
-                              fontWeight:
-                                  FontWeight.w200, // Font weight of the text
-                              color: Colors.black, // Color of the text
-                            ),
-                          ),
-                        ),
-                        const Expanded(
-                          child: Divider(
-                            color: Colors.grey,
-                            thickness: 1,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-              ],
-            )),
-      ),
-    );
-  }
-
-  void _showReactionTooltip(BuildContext context, Message message) {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            // mainAxisAlignment: MainAxisAlignment.spaceAround,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                "React to message",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  // Reactions using emojis
-                  GestureDetector(
-                    onTap: () => _handleReaction(context, message, '👍'),
-                    // child: Html(data: '👍')
-                    child: const Text(
-                      '👍',
-                      style: TextStyle(fontSize: 24),
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () => _handleReaction(context, message, '👎'),
-                    child: const Text(
-                      '👎',
-                      style: TextStyle(fontSize: 24),
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () => _handleReaction(context, message, '😂'),
-                    child: const Text(
-                      '😂',
-                      style: TextStyle(fontSize: 24),
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () => _handleReaction(context, message, '❤️'),
-                    child: const Text(
-                      '❤️',
-                      style: TextStyle(fontSize: 24),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  void _handleReaction(BuildContext context, Message message, String reaction) {
+  void _handleReaction(BuildContext context, Message message, String emoji) {
     final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+    chatProvider.addEmojiReaction(message, emoji);
+    // Navigator.pop(context);
+  }
 
-    // Send the emoji reaction to the server using the provider
-    // chatProvider.sendReaction(message.id, reaction).then((_) {
-    //   print("Reaction to message '${message.content}' was successful: $reaction");
-    // }).catchError((error) {
-    //   print("Failed to send reaction: $error");
-    // });
-
-    Navigator.pop(context); // Close the modal after reaction
+  void _deleteMessage(BuildContext context, Message message) {
+    final chatProvider = Provider.of<ChatProvider>(context, listen: false);
+    chatProvider.deleteMessage(message);
+    // Navigator.pop(context);
   }
 }

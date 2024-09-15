@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 import 'package:ainaglam/extentions/context.dart';
@@ -35,11 +34,15 @@ class _AuthScreenState extends State<LoginScreen> {
         child: Form(
           key: _formKey,
           child: Container(
-            width: 450,
+            width: 500,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Color.fromARGB(255, 226, 228, 231)),
-              color: const Color.fromARGB(255, 243, 244, 246),
+              borderRadius: BorderRadius.circular(0.0),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color.fromARGB(142, 222, 220, 220),
+                  blurRadius: 5.0,
+                ),
+              ],
             ),
             child: Stack(
               children: [
@@ -73,17 +76,14 @@ class _AuthScreenState extends State<LoginScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         // const Spacer(),  // full screen background set
-                        Align(
-                          alignment: Alignment.topLeft, // center the text
-                          child: Text(
-                            _isSignUp ? 'アカウントを作成' : 'ログイン',
-                            style: context.textTheme.headlineLarge,
-                          ),
+                        Text(
+                          _isSignUp ? 'アカウントを作成' : 'ログイン',
+                          style: context.textTheme.headlineLarge,
                         ),
                         const SizedBox(height: 16),
                         InputField.email(
                           controller: _emailController,
-                          label: _isSignUp ? 'メールアドレス（仕事用アドレス推奨）' : 'メールアドレス',
+                          label: 'メールアドレス',
                         ),
                         const SizedBox(height: 16),
                         ElevatedButton(
@@ -109,15 +109,9 @@ class _AuthScreenState extends State<LoginScreen> {
                                   }
                                 },
                           style: ElevatedButton.styleFrom(
-                              minimumSize: const Size.fromHeight(48),
-                              backgroundColor:
-                                  Color.fromARGB(255, 55, 110, 188)),
-                          child: Text(
-                            _isSignUp ? '登録する' : 'ログインする',
-                            style: const TextStyle(
-                              color: Colors.white,
-                            ),
+                            minimumSize: const Size.fromHeight(48),
                           ),
+                          child: const Text('SMSコードを送信する'),
                         ),
                         const SizedBox(height: 12),
                         Text(
@@ -162,15 +156,9 @@ class _AuthScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 25),
                         LabeledTextButton(
-                          label: _isSignUp ? '' : '',
-                          action: _isSignUp ? 'すでに登録済みですか？' : '新しいアカウントを作成',
-                          onTap: _toggleMode,
-                          style: context.textTheme.bodyMedium!.copyWith(
-                            color: Colors.red,
-                            decoration: TextDecoration.underline,
-                            decorationColor: Colors.red,
-                          ),
-                        ),
+                            label: _isSignUp ? 'すでに登録済みですか？' : '新しいアカウントを作成',
+                            action: _isSignUp ? 'ログイン' : 'サインアップ',
+                            onTap: _toggleMode),
                         // const Spacer(),    //full screen background set
                       ],
                     );

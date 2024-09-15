@@ -13,20 +13,19 @@ class HomeProvider with ChangeNotifier {
   List<Conversation> _conversations = [];
   bool _isLoading = false;
   String? _errorMessage;
-  bool _isApiCalled = false;
   Coworker? _profileUser;
-  Channel? _channelData;
-  Conversation? _convData;
+  // Channel? _channelData;
+  // Conversation? _convData;
 
   List<Channel> get channels => _channels;
   List<Coworker> get coworkers => _coworkers;
   List<Conversation> get conversations => _conversations;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
-  bool get isApiCalled => _isApiCalled;
+
   Coworker? get profileUser => _profileUser;
-  Channel? get channelData => _channelData;
-  Conversation? get convData => _convData;
+  // Channel? get channelData => _channelData;
+  // Conversation? get convData => _convData;
 
   Future<void> fetchWorkspaceDetails(String workspaceId) async {
     _isLoading = true;
@@ -54,44 +53,6 @@ class HomeProvider with ChangeNotifier {
         _saveUserToPrefs(_profileUser!);
       } else {
         _errorMessage = response['msg'];
-      }
-    } catch (error) {
-      _errorMessage = "An error occurred: $error";
-    } finally {
-      _isLoading = false;
-      _isApiCalled = true;
-      notifyListeners();
-    }
-  }
-
-  Future<void> fetchChannelData(String channelId) async {
-    _isLoading = true;
-    notifyListeners();
-    try {
-      final response = await _homeService.fetchChannelData(channelId);
-      if (response['success'] == true) {
-        Map<String, dynamic> channelJson =
-            json.decode(response['data'])['data'];
-        _channelData = Channel.fromJson(channelJson);
-        print(channelData!.title);
-      }
-    } catch (error) {
-      _errorMessage = "An error occurred: $error";
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> fetchConversationData(String conversationlId) async {
-    _isLoading = true;
-    notifyListeners();
-    try {
-      final response =
-          await _homeService.fetchConversationData(conversationlId);
-      if (response['success'] == true) {
-        Map<String, dynamic> convJson = json.decode(response['data'])['data'];
-        _convData = Conversation.fromJson(convJson);
       }
     } catch (error) {
       _errorMessage = "An error occurred: $error";

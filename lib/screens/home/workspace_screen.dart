@@ -4,15 +4,25 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 import 'home_screen.dart';
 
-class WorkspaceScreen extends StatelessWidget {
+class WorkspaceScreen extends StatefulWidget {
   final String tokenString;
   const WorkspaceScreen({super.key, required this.tokenString});
+  @override
+  _WorkSpaceScreenState createState() => _WorkSpaceScreenState();
+}
+
+class _WorkSpaceScreenState extends State<WorkspaceScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<WorkspaceProvider>(context, listen: false)
+          .fetchWorkspaces(widget.tokenString);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    // Future.microtask(() =>
-    //     Provider.of<WorkspaceProvider>(context, listen: false)
-    //         .fetchWorkspaces(tokenString));
     return Scaffold(
       appBar: AppBar(title: const Text('ワークスペースを選択')),
       body: Stack(
@@ -28,13 +38,9 @@ class WorkspaceScreen extends StatelessWidget {
               if (workspaceProvider.isLoading) {
                 return const Center(child: CircularProgressIndicator());
               }
-              if (!workspaceProvider.isApiCalled) {
-                workspaceProvider.fetchWorkspaces(tokenString);
-              }
               if (workspaceProvider.errorMessage != null) {
                 return Center(child: Text(workspaceProvider.errorMessage!));
               }
-
               final workspaces = workspaceProvider.workspaces;
 
               if (workspaces.isEmpty) {
@@ -98,13 +104,10 @@ class WorkspaceScreen extends StatelessWidget {
                             ),
                             ElevatedButton(
                               onPressed: () {
-                                workspaceProvider
-                                    .selectWorkspace(workspaces[index]);
                                 Navigator.of(context).push(
                                   MaterialPageRoute(
-                                    builder: (context) =>
-                                        ChannelAndCoworkersScreen(
-                                            workspaceId: workspaces[index].id),
+                                    builder: (context) => HomeScreen(
+                                        workspaceId: workspaces[index].id),
                                   ),
                                 );
                               },

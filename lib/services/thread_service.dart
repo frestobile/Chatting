@@ -2,23 +2,33 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../models/message_model.dart';
+import 'package:ainaglam/providers/auth_provider.dart';
+import 'package:ainaglam/providers/home_provider.dart';
+import 'package:ainaglam/models/user_model.dart';
+import 'package:ainaglam/models/coworker_model.dart';
+import 'package:ainaglam/models/threadmsg_model.dart';
 
-class ApiService {
+class ThreadService {
   static final String _baseUrl = dotenv.env['API_BASE_URL'] ?? '';
+  final AuthProvider _authProvider = AuthProvider();
+  final HomeProvider _homeProvider = HomeProvider();
 
-  static Future<List<Message>> fetchMessages(
-      String workspaceId, String channelId) async {
+  Future<Map<String, dynamic>> fetchThreadMessages(String messageId) async {
+    User? userData = await _authProvider.loadAuthData();
+    Coworker? user = await _homeProvider.loadUserFromPrefs();
     final response = await http.get(
-      Uri.parse(
-          '$_baseUrl/workspaces/$workspaceId/channels/$channelId/messages'),
-      headers: {'Content-Type': 'application/json'},
+      Uri.parse('$_baseUrl/threads?message=$messageId'),
+      headers: {'Authorization': 'Bearer ${userData?.token}'},
     );
 
-    if (response.statusCode == 200) {
-      final List<dynamic> data = jsonDecode(response.body);
-      return data.map((message) => Message.fromJson(message)).toList();
+    if (response.statusCode == 201) {
+      return {'success': true, 'msg': '', 'data': response.body, 'user': user};
     } else {
-      throw Exception('Failed to load messages');
+      return {
+        'success': false,
+        'msg': 'Failed to fetch Messages',
+        'data': response.body
+      };
     }
   }
 
@@ -37,7 +47,6 @@ class ApiService {
       throw Exception('Failed to send message');
     }
   }
-
 
   static Future<Message> replyToThread(
       String parentMessageId, String content) async {

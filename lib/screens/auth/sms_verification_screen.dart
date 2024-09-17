@@ -147,7 +147,8 @@ class SmsVerificationScreen extends StatelessWidget {
                                             // await workspaceProvider
                                             //     .fetchWorkspaces(
                                             //         authProvider.token!);
-                                            Navigator.of(context).push(
+                                            Navigator.of(context)
+                                                .pushReplacement(
                                               MaterialPageRoute(
                                                 builder: (context) =>
                                                     WorkspaceScreen(

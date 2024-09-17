@@ -1,4 +1,7 @@
 // import 'package:ainaglam/screens/home/chat_screen.dart';
+import 'package:ainaglam/models/user_model.dart';
+import 'package:ainaglam/providers/auth_provider.dart';
+import 'package:ainaglam/screens/auth/login_screen.dart';
 import 'package:ainaglam/screens/home/msg_screen.dart';
 
 import 'package:flutter/material.dart';
@@ -6,23 +9,31 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 import 'package:ainaglam/extentions/context.dart';
 import '../../providers/home_provider.dart';
+import 'package:ainaglam/screens/home/workspace_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 // import '../../models/channel_model.dart';
 // import '../../models/user_model.dart';
 
 class HomeScreen extends StatefulWidget {
   final String workspaceId;
+  final String workspaceName;
 
-  const HomeScreen({super.key, required this.workspaceId});
+  const HomeScreen(
+      {super.key, required this.workspaceId, required this.workspaceName});
   @override
   _HomeScreenState createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  final AuthProvider _authProvider = AuthProvider();
   bool isTapped = false;
+  String title = '';
   @override
   void initState() {
     super.initState();
 
+    title = widget.workspaceName;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<HomeProvider>(context, listen: false)
           .fetchWorkspaceDetails(widget.workspaceId);
@@ -32,8 +43,153 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-          title: const Text('スレッド & メンバー'), automaticallyImplyLeading: false),
+      appBar: PreferredSize(
+        preferredSize: Size.fromHeight(80.0),
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Colors.white, // App bar background color
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black26,
+                blurRadius: 1,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          child: SafeArea(
+            child: Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 5),
+              child: Row(
+                children: [
+                  PopupMenuButton<int>(
+                    itemBuilder: (context) => [
+                      PopupMenuItem(
+                        value: 1,
+                        child: Row(
+                          children: [
+                            Icon(Icons.compare_arrows_rounded,
+                                color: Colors.grey[600]),
+                            const SizedBox(width: 10),
+                            Text(
+                              title,
+                              style: TextStyle(
+                                  fontSize: 12, color: Colors.grey[600]),
+                            ),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: 0,
+                        child: Row(
+                          children: [
+                            Icon(Icons.logout, color: Colors.grey[600]),
+                            const SizedBox(width: 10),
+                            Text(
+                              "ログアウト",
+                              style: TextStyle(
+                                  fontSize: 12, color: Colors.grey[600]),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    onSelected: (value) async {
+                      // Handle menu selection
+                      if (value == 1) {
+                        // workspace screen
+
+                        User? userData = await _authProvider.loadAuthData();
+                        Navigator.of(context).pushReplacement(
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                WorkspaceScreen(tokenString: userData!.token),
+                          ),
+                        );
+                      } else if (value == 0) {
+                        //logout
+                        SharedPreferences prefs =
+                            await SharedPreferences.getInstance();
+                        await prefs.remove('profile_data');
+                        await prefs.remove('user_data');
+                        Navigator.of(context).pushReplacement(
+                          MaterialPageRoute(
+                            builder: (context) => const LoginScreen(),
+                          ),
+                        );
+                      }
+                    },
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 24,
+                          backgroundColor: Colors.lightBlue, // Avatar color
+                          child: Text(
+                            title[0],
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          title,
+                          style: const TextStyle(
+                            color: Colors.black,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        // SizedBox(width: 12), // Space between avatar and name
+
+                        // // User name
+                        // Column(
+                        //   crossAxisAlignment: CrossAxisAlignment.start,
+                        //   mainAxisAlignment: MainAxisAlignment.center,
+                        //   children: [
+                        //     Text(
+                        //       'John Doe',
+                        //       style: TextStyle(
+                        //         fontSize: 20,
+                        //         color: Colors.white,
+                        //         fontWeight: FontWeight.bold,
+                        //       ),
+                        //     ),
+                        //     Text(
+                        //       'Online',
+                        //       style: TextStyle(
+                        //         fontSize: 16,
+                        //         color: Colors.white70,
+                        //       ),
+                        //     ),
+                        //   ],
+                        // ),
+                        // Spacer(),
+
+                        // Optional action buttons or icons
+                        // IconButton(
+                        //   icon: Icon(Icons.notifications, color: Colors.white),
+                        //   onPressed: () {
+                        //     print('Notification icon clicked');
+                        //   },
+                        // ),
+                        // IconButton(
+                        //   icon: Icon(Icons.more_vert, color: Colors.white),
+                        //   onPressed: () {
+                        //     print('More options icon clicked');
+                        //   },
+                        // ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
       body: Consumer<HomeProvider>(
         builder: (context, homeProvider, _) {
           if (homeProvider.isLoading) {

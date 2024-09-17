@@ -46,12 +46,6 @@ class _AuthScreenState extends State<LoginScreen> {
             ),
             child: Stack(
               children: [
-                // Background SVG Image mainAxisSize: MainAxisSize.min,
-                // Positioned.fill(
-                //   child: SvgPicture.asset('assets/images/logo-mark.svg',
-                //       fit: BoxFit.scaleDown),
-                // ),
-                /* Top-right corner image */
                 Positioned(
                   top: 0,
                   right: 0,

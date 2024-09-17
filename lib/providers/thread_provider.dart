@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -18,6 +20,8 @@ class ThreadProvider with ChangeNotifier {
   String? _errorMessage;
   String? _currentMessageId;
   // Coworker? _user;
+  String? _uploadedImageName;
+  String? _uploadedVideoName;
 
   List<ThreadMsg> get threadMessages => _threadMessages;
   bool get isLoading => _isLoading;
@@ -25,6 +29,8 @@ class ThreadProvider with ChangeNotifier {
   String? get errorMessage => _errorMessage;
   String? get currentMessageId => _currentMessageId;
   // Coworker? get user => _user;
+  String? get uploadedImageName => _uploadedImageName;
+  String? get uploadedVideoName => _uploadedVideoName;
 
   // connect to Socket.IO server
   void connect() {
@@ -119,27 +125,95 @@ class ThreadProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // Future<void> addEmojiReaction(String messageId, String emoji) async {
+// Image upload
+  Future<void> imageUploadByByte(Uint8List imgData) async {
+    _uploadedImageName = null;
+    _errorMessage = null;
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final response = await _threadService.imageUploadByByte(imgData);
+      if (response['success'] == true) {
+        String fileName = response['data']['filename'];
+        _uploadedImageName = fileName;
+      } else {
+        _errorMessage = "Image uplaod failed.";
+      }
+    } catch (error) {
+      _errorMessage = "An error occurred: $error";
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
 
-  //   notifyListeners();
-  // }
+  Future<void> imageUploadByFile(File imgData) async {
+    _uploadedImageName = null;
+    _errorMessage = null;
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final response = await _threadService.imageUploadByFile(imgData);
+      if (response['success'] == true) {
+        String fileName = response['data']['filename'];
+        _uploadedImageName = fileName;
+      } else {
+        _errorMessage = "Image upload failed";
+      }
+    } catch (error) {
+      _errorMessage = "An error occurred: $error";
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
 
-  // void openThread(String parentMessageId) {
-  //   _threadMessages =
-  //       _messages.where((msg) => msg. == parentMessageId).toList();
-  //   notifyListeners();
-  // }
+  // Video upload
+  Future<void> videoUploadByByte(Uint8List imgData) async {
+    _uploadedVideoName = null;
+    _errorMessage = null;
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final response = await _threadService.videoUploadByByte(imgData);
+      if (response['success'] == true) {
+        String fileName = response['data']['filename'];
+        _uploadedVideoName = fileName;
+      } else {
+        _errorMessage = "Image uplaod failed.";
+      }
+    } catch (error) {
+      _errorMessage = "An error occurred: $error";
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
 
-  // Future<void> replyToThread(String parentMessageId, String content) async {
-  //   final newMessage =
-  //       await _threadService.replyToThread(parentMessageId, content);
-  //   _threadMessages.add(newMessage);
-  //   notifyListeners();
-  // }
+  Future<void> videoUploadByFile(File imgData) async {
+    _uploadedVideoName = null;
+    _errorMessage = null;
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final response = await _threadService.videoUploadByFile(imgData);
+      if (response['success'] == true) {
+        String fileName = response['data']['filename'];
+        _uploadedVideoName = fileName;
+      } else {
+        _errorMessage = "Image upload failed";
+      }
+    } catch (error) {
+      _errorMessage = "An error occurred: $error";
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
 
-  // @override
-  // void dispose() {
-  //   _channel.sink.close();
-  //   super.dispose();
-  // }
+  @override
+  void dispose() {
+    _socket!.disconnect();
+    super.dispose();
+  }
 }

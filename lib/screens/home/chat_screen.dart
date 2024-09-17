@@ -1,9 +1,13 @@
-// import 'package:ainaglam/providers/home_provider.dart';
+import 'dart:io';
+
+import 'package:uuid/uuid.dart';
 import 'package:ainaglam/screens/home/thread_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
+import 'package:quill_html_editor/quill_html_editor.dart';
 
+// import 'package:file_picker/file_picker.dart';
 import 'package:ainaglam/models/message_model.dart';
 import 'package:ainaglam/providers/chat_provider.dart';
 import 'package:ainaglam/widgets/message_bubble.dart';
@@ -31,6 +35,11 @@ class _ChatScreenState extends State<ChatScreen> {
   OverlayEntry? _overlayEntry;
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _messageController = TextEditingController();
+  final QuillEditorController _controller =
+      QuillEditorController(); // Initialize the editor controller
+
+  File? _selectedFile;
+
   ChatProvider chatProvider = ChatProvider();
   String organisationId = '';
   String channelId = '';
@@ -55,10 +64,12 @@ class _ChatScreenState extends State<ChatScreen> {
       if (widget.isPrivateChat) {
         await chatProvider.fetchConversationMessages(
             widget.workspaceId, widget.channelId);
+        await chatProvider.fetchConversationData(channelId);
         channelId = widget.channelId;
       } else {
         await chatProvider.fetchChannelMessages(
             widget.workspaceId, widget.channelId);
+        await chatProvider.fetchChannelData(channelId);
         channelId = widget.channelId;
       }
     });
@@ -142,21 +153,26 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
                 const SizedBox(width: 10),
                 GestureDetector(
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => ThreadScreen(
-                          message: message, user: chatProvider.user!),
-                    ),
-                  ),
+                  onTap: () {
+                    _removeReactionPanel();
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => ThreadScreen(
+                            message: message, user: chatProvider.user!),
+                      ),
+                    );
+                  },
                   child: const Icon(Icons.reply, color: Colors.white),
                 ),
                 const SizedBox(width: 10),
                 if (chatProvider.user!.id == message.sender!.id)
                   GestureDetector(
                       onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Delete clicked')),
-                        );
+                        // ScaffoldMessenger.of(context).showSnackBar(
+                        //   const SnackBar(content: Text('Delete clicked')),
+                        // );
+                        _removeReactionPanel();
+                        chatProvider.deleteMessage(message);
                         //  confirm dialog
                       },
                       child: const Icon(Icons.delete, color: Colors.white)),
@@ -173,23 +189,20 @@ class _ChatScreenState extends State<ChatScreen> {
 
   // Function to remove the reaction panel
   void _removeReactionPanel() {
-    if (_overlayEntry != null) {
-      _overlayEntry?.remove();
-      _overlayEntry = null;
-    }
-
+    _overlayEntry?.remove();
+    _overlayEntry = null;
     chatProvider.setCurrentMessageId(null);
   }
 
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      }
+      // if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+      // }
     });
   }
 
@@ -263,25 +276,72 @@ class _ChatScreenState extends State<ChatScreen> {
                       final message = chatProvider.messages[index];
                       final GlobalKey key = GlobalKey();
                       return GestureDetector(
-                          key: key,
-                          onTap: () {
+                        key: key,
+                        onTap: () {
+                          if (message.type != 'date') {
                             if (chatProvider.currentMessageId != message.id) {
                               _showReactionPanel(context, key, message);
                             }
+                          }
+                        },
+                        child: MessageBubble(
+                          message: message,
+                          user: chatProvider.user!,
+                          onReply: () {
+                            _removeReactionPanel();
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => ThreadScreen(
+                                    message: message, user: chatProvider.user!),
+                              ),
+                            );
                           },
-                          child: MessageBubble(
-                            message: message,
-                            user: chatProvider.user!,
-                            onReply: () {},
-                          ));
+                        ),
+                      );
                     },
                   ),
                 ),
-                _buildMessageInput(chatProvider)
+                // _buildMessageInput(chatProvider)
+                _buildEditor(chatProvider)
               ],
             );
           }),
         ));
+  }
+
+  Widget _buildEditor(ChatProvider chatProvider) {
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Column(
+        children: [
+          // Toolbar with custom image button
+          ToolBar(
+            toolBarColor: Colors.cyan.shade50,
+            activeIconColor: Colors.green,
+            padding: const EdgeInsets.all(8),
+            iconSize: 20,
+            controller: _controller,
+          ),
+
+          Row(
+            children: [
+              Expanded(
+                child: QuillHtmlEditor(
+                  controller: _controller,
+                  hintText: 'Message #general',
+                  backgroundColor: Colors.white,
+                  minHeight: 100, // Smaller height for input area
+                ),
+              ),
+              IconButton(
+                icon: Icon(Icons.send, color: Colors.blue),
+                onPressed: () {}, // Send button action
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildMessageInput(ChatProvider chatProvider) {
@@ -292,19 +352,26 @@ class _ChatScreenState extends State<ChatScreen> {
           Expanded(
             child: TextField(
               controller: _messageController,
-              decoration: const InputDecoration(
-                hintText: 'Message #development',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                hintText: 'Message #$title',
+                border: const OutlineInputBorder(),
               ),
             ),
           ),
           IconButton(
             icon: const Icon(Icons.send),
             onPressed: () {
-              // chatProvider.sendMessage(
-              //     organisationId, channelId, _messageController.text);
-              _messageController.clear(); // Clear the input field
-              _scrollToBottom();
+              if (_messageController.text.trim().isNotEmpty) {
+                // var uuid = Uuid();
+                final newMsg = {
+                  "sender": chatProvider.user!,
+                  "content": _messageController.text
+                };
+                chatProvider.sendMessage(
+                    organisationId, channelId, newMsg, isChannel);
+                _messageController.clear(); // Clear the input field
+                _scrollToBottom();
+              }
             },
           ),
         ],
@@ -313,7 +380,6 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _handleReaction(BuildContext context, Message message, String emoji) {
-    final chatProvider = Provider.of<ChatProvider>(context, listen: false);
     chatProvider.addEmojiReaction(message, emoji);
     // Navigator.pop(context);
   }

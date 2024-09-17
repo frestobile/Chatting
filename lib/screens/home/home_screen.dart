@@ -18,6 +18,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  bool isTapped = false;
   @override
   void initState() {
     super.initState();
@@ -44,111 +45,147 @@ class _HomeScreenState extends State<HomeScreen> {
           final channels = homeProvider.channels;
           final conversations = homeProvider.conversations;
 
-          return Column(
-            children: [
-              Text("スレッド", style: context.textTheme.headlineSmall),
-              Expanded(
-                child: ListView.builder(
-                  itemCount: channels.length,
-                  itemBuilder: (context, index) {
-                    final channel = channels[index];
-                    return Padding(
-                        padding: const EdgeInsets.only(
-                          top: 5.0,
-                          bottom: 5.0,
-                          left: 30.0,
-                          right: 30.0,
-                        ),
-                        child: GestureDetector(
-                          onTap: () {
-                            // await homeProvider.fetchChannelData(channel.id);
-                            // if (homeProvider.channelData != null) {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                  builder: (context) => ChatScreen(
-                                        workspaceId: channel.organisation,
-                                        channelId: channel.id,
-                                        title: channel.name,
-                                      )),
-                            );
-                            // }
-                          },
-                          child: ListTile(
-                            title: Text(
-                              ' # ${channel.name}',
-                              style: const TextStyle(
-                                  fontSize: 18, color: Colors.black87),
+          return Padding(
+            padding:
+                const EdgeInsets.only(top: 8, left: 20, right: 20, bottom: 10),
+            child: Column(
+              children: [
+                const SizedBox(height: 15),
+                const Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    Text(
+                      'スレッド',
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
+                    ),
+                    SizedBox(width: 10),
+                    Icon(Icons.arrow_drop_down,
+                        color: Color.fromARGB(255, 0, 0, 0)),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: channels.length,
+                    itemBuilder: (context, index) {
+                      final channel = channels[index];
+                      return Padding(
+                          padding: const EdgeInsets.only(
+                            left: 5.0,
+                            right: 5.0,
+                          ),
+                          child: GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                isTapped = true;
+                              });
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                    builder: (context) => ChatScreen(
+                                          workspaceId: channel.organisation,
+                                          channelId: channel.id,
+                                          title: channel.name,
+                                        )),
+                              );
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12.0, vertical: 8.0),
+                              margin: const EdgeInsets.only(bottom: 15.0),
+                              decoration: BoxDecoration(
+                                color: Colors.grey[100],
+                                borderRadius: BorderRadius.circular(20.0),
+                              ),
+                              child: Text(
+                                ' # ${channel.name}',
+                                style: const TextStyle(
+                                    fontSize: 18, color: Colors.black87),
+                              ),
                             ),
+                          ));
+                    },
+                  ),
+                ),
+                const Divider(),
+                const Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    Text(
+                      'メンバー',
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
+                    ),
+                    SizedBox(width: 10),
+                    Icon(Icons.arrow_drop_down,
+                        color: Color.fromARGB(255, 0, 0, 0)),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: conversations.length,
+                    itemBuilder: (context, index) {
+                      final conversation = conversations[index];
+                      return GestureDetector(
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => ChatScreen(
+                                workspaceId: widget.workspaceId,
+                                channelId: conversation.id,
+                                isPrivateChat: true,
+                                title: conversation.name,
+                                avatar: conversation.avatar,
+                              ),
+                            ),
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 8),
+                          margin: const EdgeInsets.only(top: 5),
+                          decoration: BoxDecoration(
+                              color: Colors.grey[50],
+                              borderRadius: BorderRadius.circular(10)),
+                          child: ListTile(
+                            leading:
+                                conversation.collaborators[0].avatarUrl != ''
+                                    ? CircleAvatar(
+                                        radius: 20,
+                                        backgroundImage: NetworkImage(
+                                            '${dotenv.env['API_BASE_URL']}/static/avatar/${conversation.collaborators[0].avatarUrl}'),
+                                      )
+                                    : CircleAvatar(
+                                        radius: 20,
+                                        backgroundImage: RegExp(r'^[a-z]$')
+                                                .hasMatch(conversation.name[0]
+                                                    .toLowerCase())
+                                            ? AssetImage(
+                                                'avatars/${conversation.name[0].toLowerCase()}.png')
+                                            : const AssetImage(
+                                                'avatars/default.png'),
+                                      ),
+                            title: conversation.collaborators.length == 1
+                                ? Text('${conversation.name} (あなた)',
+                                    style: const TextStyle(
+                                        fontSize: 14, color: Colors.black87))
+                                : Text(
+                                    conversation.name,
+                                    style: const TextStyle(
+                                        fontSize: 14, color: Colors.black87),
+                                  ),
                             contentPadding: const EdgeInsets.all(5),
                             // tileColor: Colors.grey[200],
                             selectedTileColor: Colors.grey[400],
                           ),
-                        ));
-                  },
-                ),
-              ),
-              const Divider(),
-              Text("メンバー", style: context.textTheme.headlineSmall),
-              Expanded(
-                child: ListView.builder(
-                  itemCount: conversations.length,
-                  itemBuilder: (context, index) {
-                    final conversation = conversations[index];
-                    return Padding(
-                      padding: const EdgeInsets.only(
-                          top: 2.0, bottom: 2.0, left: 30),
-                      child: GestureDetector(
-                        onTap: () {
-                          // await homeProvider
-                          //     .fetchConversationData(conversation.id);
-                          // if (homeProvider.convData != null) {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                                builder: (context) => ChatScreen(
-                                      workspaceId: widget.workspaceId,
-                                      channelId: conversation.id,
-                                      isPrivateChat: true,
-                                      title: conversation.name,
-                                      avatar: conversation.avatar,
-                                    )),
-                            // builder: (context) => ChatScreen()),
-                          );
-                          // }
-                        },
-                        child: ListTile(
-                          leading: conversation.collaborators[0].avatarUrl != ''
-                              ? CircleAvatar(
-                                  radius: 20,
-                                  backgroundImage: NetworkImage(
-                                      '${dotenv.env['API_BASE_URL']}/static/avatar/${conversation.collaborators[0].avatarUrl}'),
-                                )
-                              : CircleAvatar(
-                                  radius: 20,
-                                  backgroundImage: RegExp(r'^[a-z]$').hasMatch(
-                                          conversation.name[0].toLowerCase())
-                                      ? AssetImage(
-                                          'avatars/${conversation.name[0].toLowerCase()}.png')
-                                      : const AssetImage('avatars/default.png'),
-                                ),
-                          title: conversation.collaborators.length == 1
-                              ? Text('${conversation.name} (あなた)',
-                                  style: const TextStyle(
-                                      fontSize: 14, color: Colors.black87))
-                              : Text(
-                                  conversation.name,
-                                  style: const TextStyle(
-                                      fontSize: 14, color: Colors.black87),
-                                ),
-                          contentPadding: const EdgeInsets.all(5),
-                          // tileColor: Colors.grey[200],
-                          selectedTileColor: Colors.grey[400],
                         ),
-                      ),
-                    );
-                  },
+                      );
+                    },
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           );
         },
       ),

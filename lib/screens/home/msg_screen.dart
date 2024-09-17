@@ -1,12 +1,20 @@
+import 'dart:convert';
+import 'dart:io';
+import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 import 'package:ainaglam/screens/home/thread_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
-
+import 'package:quill_html_editor/quill_html_editor.dart';
+import 'package:html/parser.dart' as html_parser;
+import 'package:html/dom.dart' as dom;
+import 'package:file_picker/file_picker.dart';
 import 'package:ainaglam/models/message_model.dart';
 import 'package:ainaglam/providers/chat_provider.dart';
 import 'package:ainaglam/widgets/message_bubble.dart';
+import 'package:ainaglam/utils/dialog.dart';
 
 class ChatScreen extends StatefulWidget {
   final String workspaceId;
@@ -30,13 +38,18 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   OverlayEntry? _overlayEntry;
   final ScrollController _scrollController = ScrollController();
-  final TextEditingController _messageController = TextEditingController();
+  final QuillEditorController _controller =
+      QuillEditorController(); // Initialize the editor controller
+
   ChatProvider chatProvider = ChatProvider();
   String organisationId = '';
   String channelId = '';
   String title = '';
   String avatar = '';
   bool isChannel = true;
+
+  File? _selectedFile; // For mobile
+  Uint8List? _selectedFileBytes; // For web
 
   @override
   void initState() {
@@ -64,7 +77,6 @@ class _ChatScreenState extends State<ChatScreen> {
         channelId = widget.channelId;
       }
     });
-    _scrollToBottom();
     if (mounted) {
       chatProvider.connect();
     }
@@ -73,8 +85,8 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void dispose() {
     _removeReactionPanel();
+    _controller.dispose();
     _scrollController.dispose();
-    _messageController.dispose();
     // chatProvider.dispose();
     super.dispose();
   }
@@ -186,81 +198,76 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _scrollToBottom() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      }
-    });
+    _scrollController.animateTo(
+      _scrollController.position.maxScrollExtent,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOut,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: isChannel
-            ? AppBar(
-                actions: [
-                  Row(
-                    children: [
-                      Text(
-                        title.toUpperCase(),
-                        style: const TextStyle(fontSize: 18),
-                      ),
-                      const SizedBox(width: 25),
-                    ],
-                  ),
-                ],
-              )
-            : AppBar(
-                actions: [
-                  Row(
-                    children: [
-                      avatar != ''
-                          ? CircleAvatar(
-                              radius: 20,
-                              backgroundImage: NetworkImage(
-                                  '${dotenv.env['API_BASE_URL']}/static/avatar/$avatar'),
-                            )
-                          : CircleAvatar(
-                              radius: 20,
-                              backgroundImage: RegExp(r'^[a-z]$')
-                                      .hasMatch(title[0].toLowerCase())
-                                  ? AssetImage('avatars/${title[0]}.png')
-                                  : const AssetImage('avatars/default.png'),
-                            ),
-                      const SizedBox(width: 10),
-                      Text(
-                        title.toUpperCase(),
-                        style: const TextStyle(fontSize: 18),
-                      ),
-                      const SizedBox(width: 25),
-                    ],
-                  ),
-                ],
-              ),
-        body: GestureDetector(
-          onTap: () {
-            if (_overlayEntry != null) {
-              _removeReactionPanel();
-            }
-          },
-          child: Consumer<ChatProvider>(builder: (context, chatProvider, _) {
-            if (chatProvider.isLoading) {
-              return const Center(
-                  child: CircularProgressIndicator()); // Show loading spinner
-            }
+      appBar: isChannel
+          ? AppBar(
+              actions: [
+                Row(
+                  children: [
+                    Text(
+                      title.toUpperCase(),
+                      style: const TextStyle(fontSize: 18),
+                    ),
+                    const SizedBox(width: 25),
+                  ],
+                ),
+              ],
+            )
+          : AppBar(
+              actions: [
+                Row(
+                  children: [
+                    avatar != ''
+                        ? CircleAvatar(
+                            radius: 20,
+                            backgroundImage: NetworkImage(
+                                '${dotenv.env['API_BASE_URL']}/static/avatar/$avatar'),
+                          )
+                        : CircleAvatar(
+                            radius: 20,
+                            backgroundImage: RegExp(r'^[a-z]$')
+                                    .hasMatch(title[0].toLowerCase())
+                                ? AssetImage('avatars/${title[0]}.png')
+                                : const AssetImage('avatars/default.png'),
+                          ),
+                    const SizedBox(width: 10),
+                    Text(
+                      title.toUpperCase(),
+                      style: const TextStyle(fontSize: 18),
+                    ),
+                    const SizedBox(width: 25),
+                  ],
+                ),
+              ],
+            ),
+      body: GestureDetector(
+        onTap: () {
+          if (_overlayEntry != null) {
+            _removeReactionPanel();
+          }
+        },
+        child: Column(
+          children: [
+            Expanded(
+              child: Consumer<ChatProvider>(
+                builder: (context, value, _) {
+                  if (chatProvider.isLoading) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
 
-            if (chatProvider.errorMessage != null) {
-              return Center(
-                  child: Text(chatProvider.errorMessage!)); // Handle errors
-            }
-            return Column(
-              children: [
-                Expanded(
-                  child: ListView.builder(
+                  if (chatProvider.errorMessage != null) {
+                    return Center(child: Text(chatProvider.errorMessage!));
+                  }
+                  return ListView.builder(
                     controller: _scrollController,
                     itemCount: chatProvider.messages.length,
                     itemBuilder: (context, index) {
@@ -290,48 +297,257 @@ class _ChatScreenState extends State<ChatScreen> {
                         ),
                       );
                     },
-                  ),
-                ),
-                _buildMessageInput(chatProvider)
-              ],
-            );
-          }),
-        ));
-  }
-
-  Widget _buildMessageInput(ChatProvider chatProvider) {
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: _messageController,
-              decoration: InputDecoration(
-                hintText: 'Message #$title',
-                border: const OutlineInputBorder(),
+                  );
+                },
               ),
             ),
+
+            // _buildMessageInput(chatProvider)
+            _buildEditor()
+          ],
+        ),
+      ),
+    );
+  }
+
+  String lastHtmlContent = "";
+  bool _hasFocus = false;
+
+  final customToolBarList = [
+    ToolBarStyle.headerOne,
+    ToolBarStyle.headerTwo,
+    ToolBarStyle.bold,
+    ToolBarStyle.italic,
+    ToolBarStyle.underline,
+    ToolBarStyle.align,
+    ToolBarStyle.listBullet,
+    ToolBarStyle.blockQuote,
+    ToolBarStyle.link,
+    ToolBarStyle.codeBlock,
+  ];
+  final _toolbarColor = Colors.grey.shade200;
+  final _backgroundColor = Colors.white70;
+  final _toolbarIconColor = Colors.black87;
+  final _editorTextStyle = const TextStyle(
+      fontSize: 16,
+      color: Colors.black,
+      fontWeight: FontWeight.normal,
+      fontFamily: 'Roboto');
+  final _hintTextStyle = const TextStyle(
+      fontSize: 16,
+      color: Color.fromARGB(91, 0, 0, 0),
+      fontWeight: FontWeight.normal);
+
+  Widget _buildEditor() {
+    return Padding(
+      padding: const EdgeInsets.all(4.0),
+      child: Column(
+        children: [
+          // Toolbar with custom image button
+          ToolBar(
+            toolBarColor: _toolbarColor, //Colors.cyan.shade50,
+            activeIconColor: Colors.green,
+            padding: const EdgeInsets.all(5),
+            iconSize: 25,
+            iconColor: _toolbarIconColor,
+            controller: _controller,
+            toolBarConfig: customToolBarList,
+            crossAxisAlignment: WrapCrossAlignment.start,
+            direction: Axis.horizontal,
+            customButtons: [
+              InkWell(
+                onTap: _pickImage,
+                child: const Icon(Icons.image),
+              ),
+              InkWell(
+                onTap: _pickVideo,
+                child: const Icon(Icons.video_camera_front_outlined),
+              )
+            ],
           ),
-          IconButton(
-            icon: const Icon(Icons.send),
-            onPressed: () {
-              if (_messageController.text.trim().isNotEmpty) {
-                // var uuid = Uuid();
-                final newMsg = {
-                  "sender": chatProvider.user!,
-                  "content": _messageController.text
-                };
-                chatProvider.sendMessage(
-                    organisationId, channelId, newMsg, isChannel);
-                _messageController.clear(); // Clear the input field
-                _scrollToBottom();
-              }
-            },
+
+          Row(
+            children: [
+              Expanded(
+                child: QuillHtmlEditor(
+                  controller: _controller,
+                  hintText: 'Message #$title',
+                  backgroundColor: Colors.white,
+                  padding: const EdgeInsets.only(left: 5, top: 5),
+                  minHeight: 50,
+                  isEnabled: true,
+                  ensureVisible: false,
+                  autoFocus: false,
+                  textStyle: _editorTextStyle,
+                  hintTextStyle: _hintTextStyle,
+                  hintTextAlign: TextAlign.start,
+                  inputAction: InputAction.newline,
+                  onFocusChanged: (focus) async {
+                    // debugPrint('has focus $focus from $_hasFocus');
+                    // if (_hasFocus == false) {
+                    //   if (isChannel) {
+                    //     await chatProvider.fetchChannelMessages(
+                    //         organisationId, channelId);
+                    //   } else {
+                    //     await chatProvider.fetchConversationMessages(
+                    //         organisationId, channelId);
+                    //   }
+                    // }
+                    setState(() {
+                      _hasFocus = focus;
+                    });
+                  },
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.send, color: Colors.blue),
+                onPressed: sendMessage, // Send button action
+              ),
+            ],
           ),
         ],
       ),
     );
+  }
+
+  // Method to pick an image
+  Future<void> _pickImage() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+      allowMultiple: false,
+      // allowedExtensions: ['jpg', 'png', 'bmp', 'ico', ''],
+    );
+
+    if (result != null) {
+      PlatformFile file = result.files.first;
+      if (kIsWeb) {
+        Uint8List? fileBytes = result.files.single.bytes;
+        if (fileBytes != null) {
+          setState(() {
+            _selectedFileBytes = fileBytes; // Store file bytes for web
+          });
+          await chatProvider.imageUploadByByte(_selectedFileBytes!);
+        }
+      } else {
+        String? filePath = result.files.single.path;
+        if (filePath != null) {
+          setState(() {
+            _selectedFile = File(filePath);
+          });
+          await chatProvider.imageUploadByFile(_selectedFile!);
+        }
+      }
+    }
+
+    if (chatProvider.uploadedImageName != null) {
+      _selectedFile = null;
+      _selectedFileBytes = null;
+      await _insertImageIntoEditor(chatProvider.uploadedImageName!);
+      debugPrint("upload success!!!");
+    }
+  }
+
+  Future<void> _pickVideo() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.video,
+      allowMultiple: false,
+      // allowedExtensions: ['jpg', 'png', 'bmp', 'ico', ''],
+    );
+
+    if (result != null) {
+      PlatformFile file = result.files.first;
+      if (file.size > 104857600) {
+        showStatusDialog(context, 'ファイルサイズは100MB以下にしてください', false);
+      } else {
+        if (kIsWeb) {
+          Uint8List? fileBytes = result.files.single.bytes;
+          if (fileBytes != null) {
+            setState(() {
+              _selectedFileBytes = fileBytes; // Store file bytes for web
+            });
+            await chatProvider.videoUploadByByte(_selectedFileBytes!);
+          }
+        } else {
+          String? filePath = result.files.single.path;
+          if (filePath != null) {
+            setState(() {
+              _selectedFile = File(filePath);
+            });
+            await chatProvider.videoUploadByFile(_selectedFile!);
+          }
+        }
+      }
+    }
+
+    if (chatProvider.uploadedVideoName != null) {
+      _selectedFile = null;
+      _selectedFileBytes = null;
+      await _insertVideoIntoEditor(chatProvider.uploadedVideoName!);
+      debugPrint("upload success!!!");
+    }
+  }
+
+  Future<void> _insertVideoIntoEditor(String filename) async {
+    String baseUrl = dotenv.env['API_BASE_URL']!;
+    String src = '${dotenv.env['API_BASE_URL']!}/static/image/$filename';
+    String customHtml = '''<a href="$src" target="_blank">$filename</a>''';
+    String cleanedHtmlString = cleanHtmlString(customHtml);
+    await _controller.setText(cleanedHtmlString);
+  }
+
+  Future<void> _insertImageIntoEditor(String filename) async {
+    String baseUrl = dotenv.env['API_BASE_URL']!;
+    String src = '${dotenv.env['API_BASE_URL']!}/static/image/$filename';
+    String customHtml =
+        '''<div><a href="$src" target="_blank" style="text-decoration: none;"><img alt='test' src="$src"
+                                  style="
+                                    width: 120px;
+                                    border-radius: 8px;
+                                    border: 2px solid white;
+                                    margin-bottom: 6px
+                                  "
+                                  width=120
+                                  height=120
+                                />
+                              </a></div>
+                              <a href="${'$baseUrl/messages/download/$filename'}">$filename</a>''';
+    String cleanedHtmlString = cleanHtmlString(customHtml);
+    await _controller.setText(cleanedHtmlString);
+  }
+
+  String cleanHtmlString(String htmlString) {
+    dom.Document document = html_parser.parse(htmlString);
+
+    // Find all anchor tags (<a>) and remove the 'rel' attribute if it exists
+    document.querySelectorAll('a').forEach((anchor) {
+      anchor.attributes.remove('rel');
+    });
+
+    // Convert the cleaned HTML back to a string
+    return document.body?.innerHtml ?? htmlString;
+  }
+
+  void sendMessage() async {
+    final htmlContent = await _controller.getText();
+    String nextContent = cleanHtmlString(htmlContent);
+    var lastCharIndex = htmlContent.length - 1;
+    while (htmlContent.substring(lastCharIndex - 10, lastCharIndex + 1) ==
+        '<p><br></p>') {
+      nextContent = nextContent.substring(0, lastCharIndex - 10);
+      lastCharIndex = nextContent.length - 1;
+    }
+    if (nextContent == '') {
+      return;
+    }
+    if (nextContent.contains('width: 120px;')) {
+      nextContent = nextContent.replaceAll('width: 120px;', 'width: 30%;');
+    }
+
+    final newMsg = {"sender": chatProvider.user!, "content": nextContent};
+    await chatProvider.sendMessage(
+        organisationId, channelId, newMsg, isChannel);
+    _scrollToBottom();
+    _controller.clear(); // Clear editor after sending
   }
 
   void _handleReaction(BuildContext context, Message message, String emoji) {

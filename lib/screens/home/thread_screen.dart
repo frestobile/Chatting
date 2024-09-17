@@ -1,7 +1,15 @@
 // import 'package:ainaglam/providers/home_provider.dart';
+import 'dart:io';
+
 import 'package:ainaglam/models/threadmsg_model.dart';
+import 'package:ainaglam/utils/dialog.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-// import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:quill_html_editor/quill_html_editor.dart';
+import 'package:html/parser.dart' as html_parser;
+import 'package:html/dom.dart' as dom;
+import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
 
 import 'package:ainaglam/models/message_model.dart';
@@ -22,10 +30,14 @@ class ThreadScreen extends StatefulWidget {
 class _ThreadScreenState extends State<ThreadScreen> {
   OverlayEntry? _overlayEntry;
   final ScrollController _scrollController = ScrollController();
-  final TextEditingController _messageController = TextEditingController();
+  final QuillEditorController _controller = QuillEditorController();
   ThreadProvider threadProvider = ThreadProvider();
   Message? parentMessage;
   Coworker? userData;
+
+  File? _selectedFile; // For mobile
+  Uint8List? _selectedFileBytes; // For web
+
   @override
   void initState() {
     super.initState();
@@ -43,7 +55,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
   void dispose() {
     _removeReactionPanel();
     _scrollController.dispose();
-    _messageController.dispose();
+    _controller.dispose();
     // threadProvider.dispose();
     super.dispose();
   }
@@ -214,23 +226,19 @@ class _ThreadScreenState extends State<ThreadScreen> {
                   _removeReactionPanel();
                 }
               },
-              child: Consumer<ThreadProvider>(
-                  builder: (context, threadProvider, _) {
-                if (threadProvider.isLoading) {
-                  return const Center(
-                      child:
-                          CircularProgressIndicator()); // Show loading spinner
-                }
+              child: Column(
+                children: [
+                  Expanded(child: Consumer<ThreadProvider>(
+                    builder: (context, threadProvider, _) {
+                      if (threadProvider.isLoading) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
 
-                if (threadProvider.errorMessage != null) {
-                  return Center(
-                      child:
-                          Text(threadProvider.errorMessage!)); // Handle errors
-                }
-                return Column(
-                  children: [
-                    Expanded(
-                      child: ListView.builder(
+                      if (threadProvider.errorMessage != null) {
+                        return Center(
+                            child: Text(threadProvider.errorMessage!));
+                      }
+                      return ListView.builder(
                         controller: _scrollController,
                         itemCount: threadProvider.threadMessages.length,
                         itemBuilder: (context, index) {
@@ -247,12 +255,12 @@ class _ThreadScreenState extends State<ThreadScreen> {
                               child: ThreadMessage(
                                   message: message, user: userData!));
                         },
-                      ),
-                    ),
-                    _buildMessageInput(threadProvider)
-                  ],
-                );
-              }),
+                      );
+                    },
+                  )),
+                  _buildEditor()
+                ],
+              ),
             ),
           ),
         ],
@@ -260,34 +268,88 @@ class _ThreadScreenState extends State<ThreadScreen> {
     );
   }
 
-  Widget _buildMessageInput(ThreadProvider threadProvider) {
+  bool _hasFocus = false;
+  final customToolBarList = [
+    ToolBarStyle.headerOne,
+    ToolBarStyle.headerTwo,
+    ToolBarStyle.bold,
+    ToolBarStyle.italic,
+    ToolBarStyle.underline,
+    ToolBarStyle.align,
+    ToolBarStyle.listBullet,
+    ToolBarStyle.blockQuote,
+    ToolBarStyle.link,
+    ToolBarStyle.codeBlock,
+  ];
+  final _toolbarColor = Colors.grey.shade200;
+  final _backgroundColor = Colors.white70;
+  final _toolbarIconColor = Colors.black87;
+  final _editorTextStyle = const TextStyle(
+      fontSize: 16,
+      color: Colors.black,
+      fontWeight: FontWeight.normal,
+      fontFamily: 'Roboto');
+  final _hintTextStyle = const TextStyle(
+      fontSize: 16,
+      color: Color.fromARGB(91, 0, 0, 0),
+      fontWeight: FontWeight.normal);
+
+  Widget _buildEditor() {
     return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Row(
+      padding: const EdgeInsets.all(4.0),
+      child: Column(
         children: [
-          Expanded(
-            child: TextField(
-              controller: _messageController,
-              decoration: const InputDecoration(
-                hintText: 'Message #thread',
-                border: OutlineInputBorder(),
+          // Toolbar with custom image button
+          ToolBar(
+            toolBarColor: _toolbarColor, //Colors.cyan.shade50,
+            activeIconColor: Colors.green,
+            padding: const EdgeInsets.all(5),
+            iconSize: 25,
+            iconColor: _toolbarIconColor,
+            controller: _controller,
+            toolBarConfig: customToolBarList,
+            crossAxisAlignment: WrapCrossAlignment.start,
+            direction: Axis.horizontal,
+            customButtons: [
+              InkWell(
+                onTap: _pickImage,
+                child: const Icon(Icons.image),
               ),
-            ),
+              InkWell(
+                onTap: _pickVideo,
+                child: const Icon(Icons.video_camera_front_outlined),
+              )
+            ],
           ),
-          IconButton(
-            icon: const Icon(Icons.send),
-            onPressed: () {
-              if (_messageController.text.isNotEmpty) {
-                final newMsg = {
-                  "sender": userData,
-                  "content": _messageController.text
-                };
-                threadProvider.sendMessages(
-                    parentMessage!.id, userData!, newMsg);
-                _messageController.clear(); // Clear the input field
-                _scrollToBottom();
-              }
-            },
+
+          Row(
+            children: [
+              Expanded(
+                child: QuillHtmlEditor(
+                  controller: _controller,
+                  hintText: 'Message #${parentMessage!.sender!.displayName}',
+                  backgroundColor: Colors.white,
+                  padding: const EdgeInsets.only(left: 5, top: 5),
+                  minHeight: 50,
+                  isEnabled: true,
+                  ensureVisible: false,
+                  autoFocus: false,
+                  textStyle: _editorTextStyle,
+                  hintTextStyle: _hintTextStyle,
+                  hintTextAlign: TextAlign.start,
+                  inputAction: InputAction.newline,
+                  onFocusChanged: (focus) async {
+                    setState(() {
+                      _hasFocus = focus;
+                    });
+                  },
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.send, color: Colors.blue),
+                onPressed: sendMessage, // Send button action
+              ),
+            ],
           ),
         ],
       ),
@@ -300,9 +362,141 @@ class _ThreadScreenState extends State<ThreadScreen> {
     // Navigator.pop(context);
   }
 
-  void _deleteMessage(BuildContext context, ThreadMsg message) {
-    // final threadProvider = Provider.of<ThreadProvider>(context, listen: false);
-    // threadProvider.deleteMessage(message);
-    // Navigator.pop(context);
+  // Method to pick an image
+  Future<void> _pickImage() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+      allowMultiple: false,
+      // allowedExtensions: ['jpg', 'png', 'bmp', 'ico', ''],
+    );
+
+    if (result != null) {
+      PlatformFile file = result.files.first;
+      if (kIsWeb) {
+        Uint8List? fileBytes = result.files.single.bytes;
+        if (fileBytes != null) {
+          setState(() {
+            _selectedFileBytes = fileBytes; // Store file bytes for web
+          });
+          await threadProvider.imageUploadByByte(_selectedFileBytes!);
+        }
+      } else {
+        String? filePath = result.files.single.path;
+        if (filePath != null) {
+          setState(() {
+            _selectedFile = File(filePath);
+          });
+          await threadProvider.imageUploadByFile(_selectedFile!);
+        }
+      }
+    }
+
+    if (threadProvider.uploadedImageName != null) {
+      _selectedFile = null;
+      _selectedFileBytes = null;
+      await _insertImageIntoEditor(threadProvider.uploadedImageName!);
+      debugPrint("upload success!!!");
+    }
+  }
+
+  Future<void> _pickVideo() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.video,
+      allowMultiple: false,
+      // allowedExtensions: ['jpg', 'png', 'bmp', 'ico', ''],
+    );
+
+    if (result != null) {
+      PlatformFile file = result.files.first;
+      if (file.size > 104857600) {
+        showStatusDialog(context, 'ファイルサイズは100MB以下にしてください', false);
+      } else {
+        if (kIsWeb) {
+          Uint8List? fileBytes = result.files.single.bytes;
+          if (fileBytes != null) {
+            setState(() {
+              _selectedFileBytes = fileBytes; // Store file bytes for web
+            });
+            await threadProvider.videoUploadByByte(_selectedFileBytes!);
+          }
+        } else {
+          String? filePath = result.files.single.path;
+          if (filePath != null) {
+            setState(() {
+              _selectedFile = File(filePath);
+            });
+            await threadProvider.videoUploadByFile(_selectedFile!);
+          }
+        }
+      }
+    }
+
+    if (threadProvider.uploadedVideoName != null) {
+      _selectedFile = null;
+      _selectedFileBytes = null;
+      await _insertVideoIntoEditor(threadProvider.uploadedVideoName!);
+      debugPrint("upload success!!!");
+    }
+  }
+
+  Future<void> _insertVideoIntoEditor(String filename) async {
+    String src = '${dotenv.env['API_BASE_URL']!}/static/image/$filename';
+    String customHtml = '''<a href="$src" target="_blank">$filename</a>''';
+    String cleanedHtmlString = cleanHtmlString(customHtml);
+    await _controller.setText(cleanedHtmlString);
+  }
+
+  Future<void> _insertImageIntoEditor(String filename) async {
+    String baseUrl = dotenv.env['API_BASE_URL']!;
+    String src = '${dotenv.env['API_BASE_URL']!}/static/image/$filename';
+    String customHtml =
+        '''<div><a href="$src" target="_blank" style="text-decoration: none;"><img alt='test' src="$src"
+                                  style="
+                                    width: 120px;
+                                    border-radius: 8px;
+                                    border: 2px solid white;
+                                    margin-bottom: 6px
+                                  "
+                                  width=120
+                                  height=120
+                                />
+                              </a></div>
+                              <a href="${'$baseUrl/messages/download/$filename'}">$filename</a>''';
+    String cleanedHtmlString = cleanHtmlString(customHtml);
+    await _controller.setText(cleanedHtmlString);
+  }
+
+  String cleanHtmlString(String htmlString) {
+    dom.Document document = html_parser.parse(htmlString);
+
+    // Find all anchor tags (<a>) and remove the 'rel' attribute if it exists
+    document.querySelectorAll('a').forEach((anchor) {
+      anchor.attributes.remove('rel');
+    });
+
+    // Convert the cleaned HTML back to a string
+    return document.body?.innerHtml ?? htmlString;
+  }
+
+  void sendMessage() async {
+    final htmlContent = await _controller.getText();
+    String nextContent = cleanHtmlString(htmlContent);
+    var lastCharIndex = htmlContent.length - 1;
+    while (htmlContent.substring(lastCharIndex - 10, lastCharIndex + 1) ==
+        '<p><br></p>') {
+      nextContent = nextContent.substring(0, lastCharIndex - 10);
+      lastCharIndex = nextContent.length - 1;
+    }
+    if (nextContent == '') {
+      return;
+    }
+    if (nextContent.contains('width: 120px;')) {
+      nextContent = nextContent.replaceAll('width: 120px;', 'width: 30%;');
+    }
+
+    final newMsg = {"sender": userData!, "content": nextContent};
+    threadProvider.sendMessages(parentMessage!.id, userData!, newMsg);
+    _scrollToBottom();
+    _controller.clear(); // Clear editor after sending
   }
 }

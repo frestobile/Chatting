@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../models/message_model.dart';
@@ -63,5 +65,133 @@ class ThreadService {
     }
   }
 
-  // Add more API methods as needed
+  Future<Map<String, dynamic>> imageUploadByFile(File img) async {
+    User? userData = await _authProvider.loadAuthData();
+
+    final uri = Uri.parse('$_baseUrl/messages/image-upload');
+    var request = http.MultipartRequest('POST', uri);
+
+    Map<String, String> headers = {
+      'Authorization':
+          'Bearer ${userData!.token}', // Example header for authorization
+      'Content-Type': 'multipart/form-data', // Set Content-Type
+    };
+    request.headers.addAll(headers);
+    request.files.add(await http.MultipartFile.fromPath('image', img.path));
+    final response = await request.send();
+
+    String responseBody = await response.stream.bytesToString();
+    var decodedJson = jsonDecode(responseBody);
+    print("Parsed JSON: $decodedJson");
+    if (response.statusCode == 200) {
+      return {'success': true, 'msg': '', 'data': decodedJson};
+    } else {
+      return {
+        'success': false,
+        'msg': 'Failed to load messages',
+        'data': decodedJson
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>> imageUploadByByte(Uint8List img) async {
+    User? userData = await _authProvider.loadAuthData();
+
+    final uri = Uri.parse('$_baseUrl/messages/image-upload');
+    var request = http.MultipartRequest('POST', uri);
+
+    Map<String, String> headers = {
+      'Authorization':
+          'Bearer ${userData!.token}', // Example header for authorization
+      'Content-Type': 'multipart/form-data', // Set Content-Type
+    };
+    request.headers.addAll(headers);
+    request.files.add(
+      http.MultipartFile.fromBytes(
+        'image',
+        img,
+        filename: 'image.png',
+        // contentType: MediaType('image', 'png'),
+      ),
+    );
+    final response = await request.send();
+
+    String responseBody = await response.stream.bytesToString();
+    var decodedJson = jsonDecode(responseBody);
+    print("Parsed JSON: $decodedJson");
+    if (response.statusCode == 200) {
+      return {'success': true, 'msg': '', 'data': decodedJson};
+    } else {
+      return {
+        'success': false,
+        'msg': 'Failed to load messages',
+        'data': decodedJson
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>> videoUploadByFile(File img) async {
+    User? userData = await _authProvider.loadAuthData();
+
+    final uri = Uri.parse('$_baseUrl/messages/file-upload');
+    var request = http.MultipartRequest('POST', uri);
+
+    Map<String, String> headers = {
+      'Authorization':
+          'Bearer ${userData!.token}', // Example header for authorization
+      'Content-Type': 'multipart/form-data', // Set Content-Type
+    };
+    request.headers.addAll(headers);
+    request.files.add(await http.MultipartFile.fromPath('file', img.path));
+    final response = await request.send();
+
+    String responseBody = await response.stream.bytesToString();
+    var decodedJson = jsonDecode(responseBody);
+    print("Parsed JSON: $decodedJson");
+    if (response.statusCode == 200) {
+      return {'success': true, 'msg': '', 'data': decodedJson};
+    } else {
+      return {
+        'success': false,
+        'msg': 'Failed to load messages',
+        'data': decodedJson
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>> videoUploadByByte(Uint8List img) async {
+    User? userData = await _authProvider.loadAuthData();
+
+    final uri = Uri.parse('$_baseUrl/messages/file-upload');
+    var request = http.MultipartRequest('POST', uri);
+
+    Map<String, String> headers = {
+      'Authorization':
+          'Bearer ${userData!.token}', // Example header for authorization
+      'Content-Type': 'multipart/form-data', // Set Content-Type
+    };
+    request.headers.addAll(headers);
+    request.files.add(
+      http.MultipartFile.fromBytes(
+        'file',
+        img,
+        filename: 'video',
+        // contentType: MediaType('image', 'png'),
+      ),
+    );
+    final response = await request.send();
+
+    String responseBody = await response.stream.bytesToString();
+    var decodedJson = jsonDecode(responseBody);
+    print("Parsed JSON: $decodedJson");
+    if (response.statusCode == 200) {
+      return {'success': true, 'msg': '', 'data': decodedJson};
+    } else {
+      return {
+        'success': false,
+        'msg': 'Failed to load messages',
+        'data': decodedJson
+      };
+    }
+  }
 }

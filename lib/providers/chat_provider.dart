@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -24,6 +26,8 @@ class ChatProvider with ChangeNotifier {
   Coworker? _user;
   Channel? _channelData;
   Conversation? _convData;
+  String? _uploadedImageName;
+  String? _uploadedVideoName;
 
   List<Message> get messages => _messages;
   Message? get selectedMessage => _selectedMessage;
@@ -34,6 +38,9 @@ class ChatProvider with ChangeNotifier {
   Coworker? get user => _user;
   Channel? get channelData => _channelData;
   Conversation? get convData => _convData;
+  String? get uploadedImageName => _uploadedImageName;
+  String? get uploadedVideoName => _uploadedVideoName;
+
   // connect to Socket.IO server
   void connect() {
     _socket = IO.io(
@@ -125,7 +132,6 @@ class ChatProvider with ChangeNotifier {
         _messages = jsonMap.map((msg) => Message.fromJson(msg)).toList();
 
         _user = response['user'];
-        print(_user!.displayName);
       } else {
         _errorMessage = response['msg'];
       }
@@ -211,6 +217,92 @@ class ChatProvider with ChangeNotifier {
       'isThread': false
     });
     notifyListeners();
+  }
+
+  // Image upload
+  Future<void> imageUploadByByte(Uint8List imgData) async {
+    _uploadedImageName = null;
+    _errorMessage = null;
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final response = await _chatService.imageUploadByByte(imgData);
+      if (response['success'] == true) {
+        String fileName = response['data']['filename'];
+        _uploadedImageName = fileName;
+      } else {
+        _errorMessage = "Image uplaod failed.";
+      }
+    } catch (error) {
+      _errorMessage = "An error occurred: $error";
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> imageUploadByFile(File imgData) async {
+    _uploadedImageName = null;
+    _errorMessage = null;
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final response = await _chatService.imageUploadByFile(imgData);
+      if (response['success'] == true) {
+        String fileName = response['data']['filename'];
+        _uploadedImageName = fileName;
+      } else {
+        _errorMessage = "Image upload failed";
+      }
+    } catch (error) {
+      _errorMessage = "An error occurred: $error";
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  // Video upload
+  Future<void> videoUploadByByte(Uint8List imgData) async {
+    _uploadedVideoName = null;
+    _errorMessage = null;
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final response = await _chatService.videoUploadByByte(imgData);
+      if (response['success'] == true) {
+        String fileName = response['data']['filename'];
+        _uploadedVideoName = fileName;
+      } else {
+        _errorMessage = "Image uplaod failed.";
+      }
+    } catch (error) {
+      _errorMessage = "An error occurred: $error";
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> videoUploadByFile(File imgData) async {
+    _uploadedVideoName = null;
+    _errorMessage = null;
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final response = await _chatService.videoUploadByFile(imgData);
+      if (response['success'] == true) {
+        String fileName = response['data']['filename'];
+        _uploadedVideoName = fileName;
+      } else {
+        _errorMessage = "Image upload failed";
+      }
+    } catch (error) {
+      _errorMessage = "An error occurred: $error";
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
   }
 
   @override

@@ -22,7 +22,7 @@ class MessageBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 30.0),
+      margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 30.0),
       child: Column(
         children: [
           if (message.type != 'date')

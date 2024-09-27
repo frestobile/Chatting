@@ -103,7 +103,7 @@ class _WorkSpaceScreenState extends State<WorkspaceScreen> {
                                               backgroundColor: Colors
                                                   .pinkAccent, // Avatar color
                                               child: Text(
-                                                workspace.name,
+                                                workspace.name[0],
                                                 style: const TextStyle(
                                                   color: Colors.white,
                                                   fontSize: 16,

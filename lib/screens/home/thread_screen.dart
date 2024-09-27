@@ -1,6 +1,7 @@
 // import 'package:ainaglam/providers/home_provider.dart';
 import 'dart:io';
 
+import 'package:ainaglam/models/conversation_model.dart';
 import 'package:ainaglam/models/threadmsg_model.dart';
 import 'package:ainaglam/utils/dialog.dart';
 import 'package:flutter/foundation.dart';
@@ -17,11 +18,17 @@ import 'package:ainaglam/providers/thread_provider.dart';
 import 'package:ainaglam/widgets/threadmsg_bubble.dart';
 import 'package:ainaglam/widgets/message_bubble.dart';
 import 'package:ainaglam/models/coworker_model.dart';
+import 'package:ainaglam/screens/home/msg_screen.dart';
 
 class ThreadScreen extends StatefulWidget {
   final Message message;
   final Coworker user;
-  const ThreadScreen({super.key, required this.message, required this.user});
+  final String chatTitle;
+  const ThreadScreen(
+      {super.key,
+      required this.message,
+      required this.user,
+      required this.chatTitle});
 
   @override
   _ThreadScreenState createState() => _ThreadScreenState();
@@ -34,6 +41,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
   ThreadProvider threadProvider = ThreadProvider();
   Message? parentMessage;
   Coworker? userData;
+  String? title;
 
   File? _selectedFile; // For mobile
   Uint8List? _selectedFileBytes; // For web
@@ -43,6 +51,8 @@ class _ThreadScreenState extends State<ThreadScreen> {
     super.initState();
     parentMessage = widget.message;
     userData = widget.user;
+    title = widget.chatTitle;
+
     threadProvider = Provider.of<ThreadProvider>(context, listen: false);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await threadProvider.fetchThreadMessages(parentMessage!.id);
@@ -169,25 +179,64 @@ class _ThreadScreenState extends State<ThreadScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        actions: [
-          Row(
-            children: [
-              const Text(
-                'スレッド',
-                style: TextStyle(fontSize: 19),
+      appBar: PreferredSize(
+          preferredSize: const Size.fromHeight(80.0),
+          child: Container(
+            decoration: const BoxDecoration(
+              color: Colors.white, // App bar background color
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black26,
+                  blurRadius: 1,
+                  offset: Offset(0, 4),
+                ),
+              ],
+            ),
+            child: SafeArea(
+                child: Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              child: Row(
+                children: [
+                  IconButton(
+                    onPressed: () {
+                      Navigator.of(context).pushReplacement(
+                        MaterialPageRoute(
+                          builder: (context) => ChatScreen(
+                              workspaceId: parentMessage!.organisation,
+                              channelId: parentMessage!.channel == ''
+                                  ? parentMessage!.conversation
+                                  : parentMessage!.channel,
+                              isPrivateChat:
+                                  parentMessage!.channel == '' ? true : false,
+                              title: title!,
+                              avatar: ''),
+                        ),
+                      );
+                    },
+                    icon: const Icon(
+                      Icons.arrow_back,
+                      color: Colors.black,
+                    ),
+                  ),
+                  const Spacer(),
+                  const Text(
+                    'スレッド',
+                    style: TextStyle(fontSize: 19),
+                  ),
+                  const Spacer(),
+                  Text(
+                    '# ${parentMessage!.sender!.displayName}',
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                  const SizedBox(width: 10),
+                ],
               ),
-              const SizedBox(width: 10),
-              Text('# ${parentMessage!.sender!.displayName}',
-                  style: const TextStyle(fontSize: 16)),
-              const SizedBox(width: 25),
-            ],
-          ),
-        ],
-      ),
+            )),
+          )),
       body: Column(
         children: [
-          Text(userData!.displayName),
+          // Text(userData!.displayName),
           MessageBubble(
             message: parentMessage!,
             user: userData!,
@@ -271,7 +320,6 @@ class _ThreadScreenState extends State<ThreadScreen> {
   bool _hasFocus = false;
   final customToolBarList = [
     ToolBarStyle.headerOne,
-    ToolBarStyle.headerTwo,
     ToolBarStyle.bold,
     ToolBarStyle.italic,
     ToolBarStyle.underline,
@@ -490,6 +538,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
     if (nextContent == '') {
       return;
     }
+    nextContent = nextContent.replaceAll('<br>', '');
     if (nextContent.contains('width: 120px;')) {
       nextContent = nextContent.replaceAll('width: 120px;', 'width: 30%;');
     }

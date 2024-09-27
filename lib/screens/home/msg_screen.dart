@@ -161,7 +161,9 @@ class _ChatScreenState extends State<ChatScreen> {
                     Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (context) => ThreadScreen(
-                            message: message, user: chatProvider.user!),
+                            message: message,
+                            user: chatProvider.user!,
+                            chatTitle: title),
                       ),
                     );
                   },
@@ -208,47 +210,98 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: isChannel
-          ? AppBar(
-              actions: [
-                Row(
-                  children: [
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(80.0),
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Colors.white, // App bar background color
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black26,
+                blurRadius: 1,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          child: SafeArea(
+            child: Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              child: Row(
+                children: [
+                  IconButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
+                    icon: const Icon(
+                      Icons.arrow_back,
+                      color: Colors.black,
+                    ),
+                  ),
+                  const Spacer(),
+                  if (!isChannel)
+                    Row(
+                      children: [
+                        avatar != ''
+                            ? CircleAvatar(
+                                radius: 20,
+                                backgroundImage: NetworkImage(
+                                    '${dotenv.env['API_BASE_URL']}/static/avatar/$avatar'),
+                              )
+                            : CircleAvatar(
+                                radius: 20,
+                                backgroundImage: RegExp(r'^[a-z]$')
+                                        .hasMatch(title[0].toLowerCase())
+                                    ? AssetImage('avatars/${title[0]}.png')
+                                    : const AssetImage('avatars/default.png'),
+                              ),
+                        const SizedBox(width: 10),
+                        Text(
+                          title.toUpperCase(),
+                          style: const TextStyle(fontSize: 18),
+                        ),
+                        const SizedBox(width: 25),
+                      ],
+                    ),
+                  if (isChannel)
                     Text(
                       title.toUpperCase(),
                       style: const TextStyle(fontSize: 18),
                     ),
-                    const SizedBox(width: 25),
-                  ],
-                ),
-              ],
-            )
-          : AppBar(
-              actions: [
-                Row(
-                  children: [
-                    avatar != ''
-                        ? CircleAvatar(
-                            radius: 20,
-                            backgroundImage: NetworkImage(
-                                '${dotenv.env['API_BASE_URL']}/static/avatar/$avatar'),
-                          )
-                        : CircleAvatar(
-                            radius: 20,
-                            backgroundImage: RegExp(r'^[a-z]$')
-                                    .hasMatch(title[0].toLowerCase())
-                                ? AssetImage('avatars/${title[0]}.png')
-                                : const AssetImage('avatars/default.png'),
-                          ),
-                    const SizedBox(width: 10),
-                    Text(
-                      title.toUpperCase(),
-                      style: const TextStyle(fontSize: 18),
-                    ),
-                    const SizedBox(width: 25),
-                  ],
-                ),
-              ],
+                  const SizedBox(width: 10)
+                ],
+              ),
             ),
+          ),
+        ),
+      ),
+      // : AppBar(
+      //     actions: [
+      //       Row(
+      //         children: [
+      //           avatar != ''
+      //               ? CircleAvatar(
+      //                   radius: 20,
+      //                   backgroundImage: NetworkImage(
+      //                       '${dotenv.env['API_BASE_URL']}/static/avatar/$avatar'),
+      //                 )
+      //               : CircleAvatar(
+      //                   radius: 20,
+      //                   backgroundImage: RegExp(r'^[a-z]$')
+      //                           .hasMatch(title[0].toLowerCase())
+      //                       ? AssetImage('avatars/${title[0]}.png')
+      //                       : const AssetImage('avatars/default.png'),
+      //                 ),
+      //           const SizedBox(width: 10),
+      //           Text(
+      //             title.toUpperCase(),
+      //             style: const TextStyle(fontSize: 18),
+      //           ),
+      //           const SizedBox(width: 25),
+      //         ],
+      //       ),
+      //     ],
+      //   ),
       body: GestureDetector(
         onTap: () {
           if (_overlayEntry != null) {
@@ -287,10 +340,12 @@ class _ChatScreenState extends State<ChatScreen> {
                           user: chatProvider.user!,
                           onReply: () {
                             _removeReactionPanel();
-                            Navigator.of(context).push(
+                            Navigator.of(context).pushReplacement(
                               MaterialPageRoute(
                                 builder: (context) => ThreadScreen(
-                                    message: message, user: chatProvider.user!),
+                                    message: message,
+                                    user: chatProvider.user!,
+                                    chatTitle: title),
                               ),
                             );
                           },
@@ -315,7 +370,6 @@ class _ChatScreenState extends State<ChatScreen> {
 
   final customToolBarList = [
     ToolBarStyle.headerOne,
-    ToolBarStyle.headerTwo,
     ToolBarStyle.bold,
     ToolBarStyle.italic,
     ToolBarStyle.underline,
@@ -539,6 +593,7 @@ class _ChatScreenState extends State<ChatScreen> {
     if (nextContent == '') {
       return;
     }
+    nextContent = nextContent.replaceAll('<br>', '');
     if (nextContent.contains('width: 120px;')) {
       nextContent = nextContent.replaceAll('width: 120px;', 'width: 30%;');
     }

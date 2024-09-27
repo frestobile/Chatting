@@ -142,45 +142,6 @@ class _HomeScreenState extends State<HomeScreen> {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        // SizedBox(width: 12), // Space between avatar and name
-
-                        // // User name
-                        // Column(
-                        //   crossAxisAlignment: CrossAxisAlignment.start,
-                        //   mainAxisAlignment: MainAxisAlignment.center,
-                        //   children: [
-                        //     Text(
-                        //       'John Doe',
-                        //       style: TextStyle(
-                        //         fontSize: 20,
-                        //         color: Colors.white,
-                        //         fontWeight: FontWeight.bold,
-                        //       ),
-                        //     ),
-                        //     Text(
-                        //       'Online',
-                        //       style: TextStyle(
-                        //         fontSize: 16,
-                        //         color: Colors.white70,
-                        //       ),
-                        //     ),
-                        //   ],
-                        // ),
-                        // Spacer(),
-
-                        // Optional action buttons or icons
-                        // IconButton(
-                        //   icon: Icon(Icons.notifications, color: Colors.white),
-                        //   onPressed: () {
-                        //     print('Notification icon clicked');
-                        //   },
-                        // ),
-                        // IconButton(
-                        //   icon: Icon(Icons.more_vert, color: Colors.white),
-                        //   onPressed: () {
-                        //     print('More options icon clicked');
-                        //   },
-                        // ),
                       ],
                     ),
                   ),
@@ -246,19 +207,37 @@ class _HomeScreenState extends State<HomeScreen> {
                               );
                             },
                             child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 12.0, vertical: 8.0),
-                              margin: const EdgeInsets.only(bottom: 15.0),
-                              decoration: BoxDecoration(
-                                color: Colors.grey[100],
-                                borderRadius: BorderRadius.circular(20.0),
-                              ),
-                              child: Text(
-                                ' # ${channel.name}',
-                                style: const TextStyle(
-                                    fontSize: 18, color: Colors.black87),
-                              ),
-                            ),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12.0, vertical: 8.0),
+                                margin: const EdgeInsets.only(bottom: 15.0),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[100],
+                                  borderRadius: BorderRadius.circular(20.0),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Text(
+                                      ' # ${channel.name}',
+                                      style: const TextStyle(
+                                          fontSize: 18, color: Colors.black87),
+                                    ),
+                                    const Spacer(),
+                                    if (channel.unreadMessagesNumber != 0)
+                                      CircleAvatar(
+                                        radius: 10,
+                                        backgroundColor:
+                                            Colors.pinkAccent, // Avatar color
+                                        child: Text(
+                                          '${channel.unreadMessagesNumber}',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                )),
                           ));
                     },
                   ),
@@ -334,6 +313,22 @@ class _HomeScreenState extends State<HomeScreen> {
                             contentPadding: const EdgeInsets.all(5),
                             // tileColor: Colors.grey[200],
                             selectedTileColor: Colors.grey[400],
+
+                            trailing: conversation.unreadMessagesNumber != 0
+                                ? CircleAvatar(
+                                    radius: 10,
+                                    backgroundColor:
+                                        Colors.pinkAccent, // Avatar color
+                                    child: Text(
+                                      '${conversation.unreadMessagesNumber}',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  )
+                                : const Text(""),
                           ),
                         ),
                       );

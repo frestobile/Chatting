@@ -60,7 +60,6 @@ class ThreadProvider with ChangeNotifier {
         int index = _threadMessages.indexWhere((item) => item.id == data['id']);
         _threadMessages[index] = msg;
       }
-      notifyListeners();
     });
 
     _socket!.onDisconnect((_) {

@@ -1,7 +1,6 @@
 import 'package:ainaglam/models/coworker_model.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:ainaglam/screens/home/thread_screen.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:ainaglam/models/message_model.dart';

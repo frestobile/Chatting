@@ -1,7 +1,6 @@
 // import 'package:ainaglam/providers/home_provider.dart';
 import 'dart:io';
 
-import 'package:ainaglam/models/conversation_model.dart';
 import 'package:ainaglam/models/threadmsg_model.dart';
 import 'package:ainaglam/utils/dialog.dart';
 import 'package:flutter/foundation.dart';

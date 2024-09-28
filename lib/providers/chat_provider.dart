@@ -1,17 +1,13 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:ainaglam/models/message_model.dart';
 import '../models/channel_model.dart';
 import '../models/coworker_model.dart';
-import 'package:ainaglam/models/reaction_model.dart';
 import '../models/conversation_model.dart';
 import 'package:ainaglam/services/chat_service.dart';
-import 'package:uuid/uuid.dart';
-import 'package:intl/intl.dart';
 
 class ChatProvider with ChangeNotifier {
   final ChatService _chatService = ChatService();

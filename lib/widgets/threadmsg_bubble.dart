@@ -24,14 +24,14 @@ class ThreadMessage extends StatelessWidget {
                   ? CircleAvatar(
                       radius: 20,
                       backgroundImage: NetworkImage(
-                          '${dotenv.env['API_BASE_URL']}/static/avatar/${message.sender!.avatarUrl}'),
+                          '${dotenv.env['API_BASE_URL']}/static/avatar/${message.sender.avatarUrl}'),
                     )
                   : CircleAvatar(
                       radius: 20,
                       backgroundImage: RegExp(r'^[a-z]$').hasMatch(
-                              message.sender!.displayName[0].toLowerCase())
+                              message.sender.displayName[0].toLowerCase())
                           ? AssetImage(
-                              'avatars/${message.sender!.displayName[0].toLowerCase()}.png')
+                              'avatars/${message.sender.displayName[0].toLowerCase()}.png')
                           : const AssetImage('avatars/default.png'),
                     ),
               const SizedBox(width: 8.0),

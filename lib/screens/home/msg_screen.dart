@@ -1,8 +1,5 @@
-import 'dart:convert';
 import 'dart:io';
-import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
-import 'package:uuid/uuid.dart';
 import 'package:ainaglam/screens/home/thread_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -201,7 +198,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void _scrollToBottom() {
     _scrollController.animateTo(
-      _scrollController.position.maxScrollExtent,
+      _scrollController.position.minScrollExtent,
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeOut,
     );

@@ -11,7 +11,7 @@ class EmojiReactionWidget extends StatelessWidget {
     required this.count,
     required this.onReact,
   });
-
+  
   @override
   Widget build(BuildContext context) {
     return GestureDetector(

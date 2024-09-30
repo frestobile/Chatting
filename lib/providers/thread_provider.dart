@@ -15,7 +15,7 @@ class ThreadProvider with ChangeNotifier {
   List<ThreadMsg> _threadMessages = [];
   bool _isLoading = false;
   Message? _selectedMessage;
-
+  
   String? _errorMessage;
   String? _currentMessageId;
   // Coworker? _user;

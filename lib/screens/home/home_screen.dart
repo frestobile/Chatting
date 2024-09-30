@@ -183,6 +183,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 10),
                 Expanded(
                   child: ListView.builder(
+                    shrinkWrap: true,
                     itemCount: channels.length,
                     itemBuilder: (context, index) {
                       final channel = channels[index];
@@ -193,9 +194,6 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           child: GestureDetector(
                             onTap: () {
-                              setState(() {
-                                isTapped = true;
-                              });
                               Navigator.of(context).push(
                                 MaterialPageRoute(
                                     builder: (context) => ChatScreen(
@@ -207,23 +205,21 @@ class _HomeScreenState extends State<HomeScreen> {
                             },
                             child: Container(
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 12.0, vertical: 8.0),
-                                margin: const EdgeInsets.only(bottom: 15.0),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[100],
-                                  borderRadius: BorderRadius.circular(20.0),
-                                ),
+                                    horizontal: 8.0, vertical: 2.0),
+                                margin: const EdgeInsets.only(bottom: 5.0),
                                 child: Row(
                                   children: [
                                     Text(
                                       ' # ${channel.name}',
                                       style: const TextStyle(
-                                          fontSize: 18, color: Colors.black87),
+                                          fontSize: 15,
+                                          color: Colors.black87,
+                                          fontWeight: FontWeight.bold),
                                     ),
                                     const Spacer(),
                                     if (channel.unreadMessagesNumber != 0)
                                       CircleAvatar(
-                                        radius: 10,
+                                        radius: 8,
                                         backgroundColor:
                                             Colors.pinkAccent, // Avatar color
                                         child: Text(
@@ -233,6 +229,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                             fontSize: 12,
                                             fontWeight: FontWeight.bold,
                                           ),
+                                          textAlign: TextAlign.center,
                                         ),
                                       ),
                                   ],
@@ -241,6 +238,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     },
                   ),
                 ),
+                // ListTile(
+                //   leading: Icon(Icons.add_circle_outline),
+                //   title: Text("新しいスレッドを作成する"),
+                // ),
                 const Divider(),
                 const Row(
                   mainAxisAlignment: MainAxisAlignment.start,
@@ -255,43 +256,42 @@ class _HomeScreenState extends State<HomeScreen> {
                         color: Color.fromARGB(255, 0, 0, 0)),
                   ],
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 Expanded(
                   child: ListView.builder(
                     itemCount: conversations.length,
                     itemBuilder: (context, index) {
                       final conversation = conversations[index];
-                      return GestureDetector(
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => ChatScreen(
-                                workspaceId: widget.workspaceId,
-                                channelId: conversation.id,
-                                isPrivateChat: true,
-                                title: conversation.name,
-                                avatar: conversation.avatar,
+                      return Padding(
+                        padding: const EdgeInsets.only(left: 5.0, right: 5.0),
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => ChatScreen(
+                                  workspaceId: widget.workspaceId,
+                                  channelId: conversation.id,
+                                  isPrivateChat: true,
+                                  title: conversation.name,
+                                  avatar: conversation.avatar,
+                                ),
                               ),
-                            ),
-                          );
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 8),
-                          margin: const EdgeInsets.only(top: 5),
-                          decoration: BoxDecoration(
-                              color: Colors.grey[50],
-                              borderRadius: BorderRadius.circular(10)),
-                          child: ListTile(
-                            leading:
-                                conversation.collaborators[0].avatarUrl != ''
+                            );
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8.0, vertical: 2.0),
+                            margin: const EdgeInsets.only(bottom: 5.0),
+                            child: Row(
+                              children: [
+                                conversation.avatar != ''
                                     ? CircleAvatar(
-                                        radius: 20,
+                                        radius: 14,
                                         backgroundImage: NetworkImage(
-                                            '${dotenv.env['API_BASE_URL']}/static/avatar/${conversation.collaborators[0].avatarUrl}'),
+                                            '${dotenv.env['API_BASE_URL']}/static/avatar/${conversation.avatar}'),
                                       )
                                     : CircleAvatar(
-                                        radius: 20,
+                                        radius: 14,
                                         backgroundImage: RegExp(r'^[a-z]$')
                                                 .hasMatch(conversation.name[0]
                                                     .toLowerCase())
@@ -300,22 +300,24 @@ class _HomeScreenState extends State<HomeScreen> {
                                             : const AssetImage(
                                                 'avatars/default.png'),
                                       ),
-                            title: conversation.collaborators.length == 1
-                                ? Text('${conversation.name} (あなた)',
-                                    style: const TextStyle(
-                                        fontSize: 14, color: Colors.black87))
-                                : Text(
-                                    conversation.name,
-                                    style: const TextStyle(
-                                        fontSize: 14, color: Colors.black87),
-                                  ),
-                            contentPadding: const EdgeInsets.all(5),
-                            // tileColor: Colors.grey[200],
-                            selectedTileColor: Colors.grey[400],
-
-                            trailing: conversation.unreadMessagesNumber != 0
-                                ? CircleAvatar(
-                                    radius: 10,
+                                const SizedBox(width: 10),
+                                conversation.collaborators.length == 1
+                                    ? Text('${conversation.name} (あなた)',
+                                        style: const TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.black87,
+                                            fontWeight: FontWeight.bold))
+                                    : Text(
+                                        conversation.name,
+                                        style: const TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.black87,
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                const Spacer(),
+                                if (conversation.unreadMessagesNumber != 0)
+                                  CircleAvatar(
+                                    radius: 8,
                                     backgroundColor:
                                         Colors.pinkAccent, // Avatar color
                                     child: Text(
@@ -325,15 +327,21 @@ class _HomeScreenState extends State<HomeScreen> {
                                         fontSize: 12,
                                         fontWeight: FontWeight.bold,
                                       ),
+                                      textAlign: TextAlign.center,
                                     ),
                                   )
-                                : const Text(""),
+                              ],
+                            ),
                           ),
                         ),
                       );
                     },
                   ),
                 ),
+                // ListTile(
+                //   leading: Icon(Icons.add_circle_outline),
+                //   title: Text("グループに招待する"),
+                // ),
               ],
             ),
           );

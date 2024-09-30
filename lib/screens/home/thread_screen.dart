@@ -13,7 +13,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
 
 import 'package:ainaglam/models/message_model.dart';
-import 'package:ainaglam/providers/thread_provider.dart';
+import 'package:ainaglam/providers/chat_provider.dart';
 import 'package:ainaglam/widgets/threadmsg_bubble.dart';
 import 'package:ainaglam/widgets/message_bubble.dart';
 import 'package:ainaglam/models/coworker_model.dart';
@@ -37,13 +37,16 @@ class _ThreadScreenState extends State<ThreadScreen> {
   OverlayEntry? _overlayEntry;
   final ScrollController _scrollController = ScrollController();
   final QuillEditorController _controller = QuillEditorController();
-  ThreadProvider threadProvider = ThreadProvider();
+  ChatProvider threadProvider = ChatProvider();
   Message? parentMessage;
   Coworker? userData;
   String? title;
 
   File? _selectedFile; // For mobile
   Uint8List? _selectedFileBytes; // For web
+
+  bool _isAtBottom = true;
+  bool _isUserScrolling = false;
 
   @override
   void initState() {
@@ -52,10 +55,16 @@ class _ThreadScreenState extends State<ThreadScreen> {
     userData = widget.user;
     title = widget.chatTitle;
 
-    threadProvider = Provider.of<ThreadProvider>(context, listen: false);
+    threadProvider = Provider.of<ChatProvider>(context, listen: false);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await threadProvider.fetchThreadMessages(parentMessage!.id);
-      _scrollToBottom();
+    });
+
+    _scrollController.addListener(() {
+      if (_scrollController.position.pixels ==
+          _scrollController.position.maxScrollExtent) {
+        _scrollToBottom();
+      }
     });
     threadProvider.connect();
   }
@@ -138,10 +147,10 @@ class _ThreadScreenState extends State<ThreadScreen> {
                       onTap: () {
                         _removeReactionPanel();
                         if (parentMessage!.conversation == '') {
-                          threadProvider.deleteMessage(
+                          threadProvider.deleteThreadMessage(
                               message, userData!, parentMessage!.channel);
                         } else if (parentMessage!.channel == '') {
-                          threadProvider.deleteMessage(
+                          threadProvider.deleteThreadMessage(
                               message, userData!, parentMessage!.conversation);
                         }
                       },
@@ -163,16 +172,32 @@ class _ThreadScreenState extends State<ThreadScreen> {
     threadProvider.setCurrentMessageId(null);
   }
 
-  void _scrollToBottom() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      }
-    });
+  void _scrollToBottom({bool animate = true}) {
+    if (animate) {
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    } else {
+      _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+    }
+  }
+
+  void _onScroll() {
+    // Check if the user has manually scrolled away from the bottom
+    if (_scrollController.position.pixels <
+        _scrollController.position.maxScrollExtent - 100) {
+      setState(() {
+        _isAtBottom = false; // User is not at the bottom
+        _isUserScrolling = true; // User manually scrolled up
+      });
+    } else {
+      setState(() {
+        _isAtBottom = true; // User is at the bottom
+        _isUserScrolling = false; // Reset scrolling flag
+      });
+    }
   }
 
   @override
@@ -199,6 +224,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
                 children: [
                   IconButton(
                     onPressed: () {
+                      // Navigator.pop(context);
                       Navigator.of(context).pushReplacement(
                         MaterialPageRoute(
                           builder: (context) => ChatScreen(
@@ -269,54 +295,75 @@ class _ThreadScreenState extends State<ThreadScreen> {
             ),
           Expanded(
             child: GestureDetector(
-              onTap: () {
-                if (_overlayEntry != null) {
-                  _removeReactionPanel();
-                }
-              },
-              child: Column(
-                children: [
-                  Expanded(child: Consumer<ThreadProvider>(
-                    builder: (context, threadProvider, _) {
-                      if (threadProvider.isLoading) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
+                onTap: () {
+                  if (_overlayEntry != null) {
+                    _removeReactionPanel();
+                  }
+                },
+                child: Stack(
+                  children: [
+                    Column(
+                      children: [
+                        Expanded(child: Consumer<ChatProvider>(
+                          builder: (context, threadProvider, _) {
+                            if (threadProvider.isLoading) {
+                              return const Center(
+                                  child: CircularProgressIndicator());
+                            }
+                            if (threadProvider.errorMessage != null) {
+                              return Center(
+                                  child: Text(threadProvider.errorMessage!));
+                            }
 
-                      if (threadProvider.errorMessage != null) {
-                        return Center(
-                            child: Text(threadProvider.errorMessage!));
-                      }
-                      return ListView.builder(
-                        controller: _scrollController,
-                        itemCount: threadProvider.threadMessages.length,
-                        itemBuilder: (context, index) {
-                          final message = threadProvider.threadMessages[index];
-                          final GlobalKey key = GlobalKey();
-                          return GestureDetector(
-                              key: key,
-                              onTap: () {
-                                if (threadProvider.currentMessageId !=
-                                    message.id) {
-                                  _showReactionPanel(context, key, message);
-                                }
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (!_isUserScrolling) {
+                                _scrollToBottom(animate: true);
+                              }
+                            });
+                            return ListView.builder(
+                              controller: _scrollController,
+                              itemCount: threadProvider.threadMessages.length,
+                              itemBuilder: (context, index) {
+                                final message =
+                                    threadProvider.threadMessages[index];
+                                final GlobalKey key = GlobalKey();
+                                return GestureDetector(
+                                    key: key,
+                                    onTap: () {
+                                      if (threadProvider.currentMessageId !=
+                                          message.id) {
+                                        _showReactionPanel(
+                                            context, key, message);
+                                      }
+                                    },
+                                    child: ThreadMessage(
+                                        message: message, user: userData!));
                               },
-                              child: ThreadMessage(
-                                  message: message, user: userData!));
-                        },
-                      );
-                    },
-                  )),
-                  _buildEditor()
-                ],
-              ),
-            ),
+                            );
+                          },
+                        )),
+                        _buildEditor()
+                      ],
+                    ),
+                    if (!_isAtBottom)
+                      Positioned(
+                        bottom: 80,
+                        right: 20,
+                        child: FloatingActionButton(
+                          onPressed: () {
+                            _scrollToBottom(animate: true);
+                          },
+                          child: const Icon(Icons.arrow_downward),
+                        ),
+                      ),
+                  ],
+                )),
           ),
         ],
       ),
     );
   }
 
-  bool _hasFocus = false;
   final customToolBarList = [
     ToolBarStyle.headerOne,
     ToolBarStyle.bold,
@@ -329,7 +376,6 @@ class _ThreadScreenState extends State<ThreadScreen> {
     ToolBarStyle.codeBlock,
   ];
   final _toolbarColor = Colors.grey.shade200;
-  final _backgroundColor = Colors.white70;
   final _toolbarIconColor = Colors.black87;
   final _editorTextStyle = const TextStyle(
       fontSize: 16,
@@ -385,11 +431,6 @@ class _ThreadScreenState extends State<ThreadScreen> {
                   hintTextStyle: _hintTextStyle,
                   hintTextAlign: TextAlign.start,
                   inputAction: InputAction.newline,
-                  onFocusChanged: (focus) async {
-                    setState(() {
-                      _hasFocus = focus;
-                    });
-                  },
                 ),
               ),
               IconButton(
@@ -405,7 +446,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
 
   void _handleReaction(BuildContext context, ThreadMsg message, String emoji) {
     // final threadProvider = Provider.of<ThreadProvider>(context, listen: false);
-    threadProvider.addEmojiReaction(message, parentMessage!, emoji, userData!);
+    threadProvider.addReactForThread(message, parentMessage!, emoji, userData!);
     // Navigator.pop(context);
   }
 
@@ -425,7 +466,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
           setState(() {
             _selectedFileBytes = fileBytes; // Store file bytes for web
           });
-          await threadProvider.imageUploadByByte(_selectedFileBytes!);
+          await threadProvider.imageUploadByByte(_selectedFileBytes!, true);
         }
       } else {
         String? filePath = result.files.single.path;
@@ -433,7 +474,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
           setState(() {
             _selectedFile = File(filePath);
           });
-          await threadProvider.imageUploadByFile(_selectedFile!);
+          await threadProvider.imageUploadByFile(_selectedFile!, true);
         }
       }
     }
@@ -464,7 +505,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
             setState(() {
               _selectedFileBytes = fileBytes; // Store file bytes for web
             });
-            await threadProvider.videoUploadByByte(_selectedFileBytes!);
+            await threadProvider.videoUploadByByte(_selectedFileBytes!, true);
           }
         } else {
           String? filePath = result.files.single.path;
@@ -472,7 +513,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
             setState(() {
               _selectedFile = File(filePath);
             });
-            await threadProvider.videoUploadByFile(_selectedFile!);
+            await threadProvider.videoUploadByFile(_selectedFile!, true);
           }
         }
       }
@@ -543,8 +584,8 @@ class _ThreadScreenState extends State<ThreadScreen> {
     }
 
     final newMsg = {"sender": userData!, "content": nextContent};
-    threadProvider.sendMessages(parentMessage!.id, userData!, newMsg);
-    _scrollToBottom();
+    threadProvider.sendThreadMessage(parentMessage!.id, userData!, newMsg);
+    _scrollToBottom(animate: true);
     _controller.clear(); // Clear editor after sending
   }
 }

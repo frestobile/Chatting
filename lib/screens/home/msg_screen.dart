@@ -45,13 +45,15 @@ class _ChatScreenState extends State<ChatScreen> {
   String avatar = '';
   bool isChannel = true;
 
+  bool _isAtBottom = true;
+  bool _isUserScrolling = false;
+
   File? _selectedFile; // For mobile
   Uint8List? _selectedFileBytes; // For web
 
   @override
   void initState() {
     super.initState();
-    if (mounted) {}
     chatProvider = Provider.of<ChatProvider>(context, listen: false);
     setState(() {
       organisationId = widget.workspaceId;
@@ -74,6 +76,8 @@ class _ChatScreenState extends State<ChatScreen> {
         channelId = widget.channelId;
       }
     });
+
+    _scrollController.addListener(_onScroll);
     if (mounted) {
       chatProvider.connect();
     }
@@ -155,14 +159,18 @@ class _ChatScreenState extends State<ChatScreen> {
                 GestureDetector(
                   onTap: () {
                     _removeReactionPanel();
-                    Navigator.of(context).push(
+                    Navigator.of(context)
+                        .push(
                       MaterialPageRoute(
                         builder: (context) => ThreadScreen(
                             message: message,
                             user: chatProvider.user!,
                             chatTitle: title),
                       ),
-                    );
+                    )
+                        .then((_) {
+                      setState(() {});
+                    });
                   },
                   child: const Icon(Icons.reply, color: Colors.white),
                 ),
@@ -170,12 +178,8 @@ class _ChatScreenState extends State<ChatScreen> {
                 if (chatProvider.user!.id == message.sender!.id)
                   GestureDetector(
                       onTap: () {
-                        // ScaffoldMessenger.of(context).showSnackBar(
-                        //   const SnackBar(content: Text('Delete clicked')),
-                        // );
                         _removeReactionPanel();
-                        chatProvider.deleteMessage(message);
-                        //  confirm dialog
+                        _deleteMessage(context, message);
                       },
                       child: const Icon(Icons.delete, color: Colors.white)),
               ],
@@ -196,12 +200,34 @@ class _ChatScreenState extends State<ChatScreen> {
     chatProvider.setCurrentMessageId(null);
   }
 
-  void _scrollToBottom() {
-    _scrollController.animateTo(
-      _scrollController.position.minScrollExtent,
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeOut,
-    );
+  void _scrollToBottom({bool animate = true}) {
+    // print("${_scrollController.position.maxScrollExtent}");
+
+    if (animate) {
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    } else {
+      _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+    }
+  }
+
+  void _onScroll() {
+    // Check if the user has manually scrolled away from the bottom
+    if (_scrollController.position.pixels <
+        _scrollController.position.maxScrollExtent - 50) {
+      setState(() {
+        _isAtBottom = false; // User is not at the bottom
+        _isUserScrolling = true; // User manually scrolled up
+      });
+    } else {
+      setState(() {
+        _isAtBottom = true; // User is at the bottom
+        _isUserScrolling = false; // Reset scrolling flag
+      });
+    }
   }
 
   @override
@@ -272,98 +298,95 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
         ),
       ),
-      // : AppBar(
-      //     actions: [
-      //       Row(
-      //         children: [
-      //           avatar != ''
-      //               ? CircleAvatar(
-      //                   radius: 20,
-      //                   backgroundImage: NetworkImage(
-      //                       '${dotenv.env['API_BASE_URL']}/static/avatar/$avatar'),
-      //                 )
-      //               : CircleAvatar(
-      //                   radius: 20,
-      //                   backgroundImage: RegExp(r'^[a-z]$')
-      //                           .hasMatch(title[0].toLowerCase())
-      //                       ? AssetImage('avatars/${title[0]}.png')
-      //                       : const AssetImage('avatars/default.png'),
-      //                 ),
-      //           const SizedBox(width: 10),
-      //           Text(
-      //             title.toUpperCase(),
-      //             style: const TextStyle(fontSize: 18),
-      //           ),
-      //           const SizedBox(width: 25),
-      //         ],
-      //       ),
-      //     ],
-      //   ),
       body: GestureDetector(
-        onTap: () {
-          if (_overlayEntry != null) {
-            _removeReactionPanel();
-          }
-        },
-        child: Column(
-          children: [
-            Expanded(
-              child: Consumer<ChatProvider>(
-                builder: (context, value, _) {
-                  if (chatProvider.isLoading) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
+          onTap: () {
+            if (_overlayEntry != null) {
+              _removeReactionPanel();
+            }
+          },
+          child: Stack(
+            children: [
+              Column(
+                children: [
+                  Expanded(
+                    child: Consumer<ChatProvider>(
+                      builder: (context, value, _) {
+                        if (chatProvider.isLoading) {
+                          return const Center(
+                              child: CircularProgressIndicator());
+                        }
 
-                  if (chatProvider.errorMessage != null) {
-                    return Center(child: Text(chatProvider.errorMessage!));
-                  }
-                  return ListView.builder(
-                    controller: _scrollController,
-                    itemCount: chatProvider.messages.length,
-                    itemBuilder: (context, index) {
-                      final message = chatProvider.messages[index];
-                      final GlobalKey key = GlobalKey();
-                      return GestureDetector(
-                        key: key,
-                        onTap: () {
-                          if (message.type != 'date') {
-                            if (chatProvider.currentMessageId != message.id) {
-                              _showReactionPanel(context, key, message);
-                            }
+                        if (chatProvider.errorMessage != null) {
+                          return Center(
+                              child: Text(chatProvider.errorMessage!));
+                        }
+
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (!_isUserScrolling) {
+                            _scrollToBottom(animate: true);
                           }
-                        },
-                        child: MessageBubble(
-                          message: message,
-                          user: chatProvider.user!,
-                          onReply: () {
-                            _removeReactionPanel();
-                            Navigator.of(context).pushReplacement(
-                              MaterialPageRoute(
-                                builder: (context) => ThreadScreen(
-                                    message: message,
-                                    user: chatProvider.user!,
-                                    chatTitle: title),
+                        });
+                        return ListView.builder(
+                          controller: _scrollController,
+                          itemCount: chatProvider.messages.length,
+                          itemBuilder: (context, index) {
+                            final message = chatProvider.messages[index];
+                            final GlobalKey key = GlobalKey();
+                            return GestureDetector(
+                              key: key,
+                              onTap: () {
+                                if (message.type != 'date') {
+                                  if (chatProvider.currentMessageId !=
+                                      message.id) {
+                                    _showReactionPanel(context, key, message);
+                                  }
+                                }
+                              },
+                              child: MessageBubble(
+                                message: message,
+                                user: chatProvider.user!,
+                                onReply: () {
+                                  _removeReactionPanel();
+                                  Navigator.of(context)
+                                      .pushReplacement(
+                                    MaterialPageRoute(
+                                      builder: (context) => ThreadScreen(
+                                          message: message,
+                                          user: chatProvider.user!,
+                                          chatTitle: title),
+                                    ),
+                                  )
+                                      .then((_) {
+                                    setState(() {});
+                                  });
+                                },
                               ),
                             );
                           },
-                        ),
-                      );
-                    },
-                  );
-                },
+                        );
+                      },
+                    ),
+                  ),
+                  _buildEditor()
+                ],
               ),
-            ),
-
-            // _buildMessageInput(chatProvider)
-            _buildEditor()
-          ],
-        ),
-      ),
+              if (!_isAtBottom)
+                Positioned(
+                  bottom: 80,
+                  right: 20,
+                  child: FloatingActionButton(
+                    onPressed: () {
+                      _scrollToBottom(animate: true);
+                    },
+                    child: const Icon(Icons.arrow_downward),
+                  ),
+                ),
+            ],
+          )),
     );
   }
 
   String lastHtmlContent = "";
-  bool _hasFocus = false;
 
   final customToolBarList = [
     ToolBarStyle.headerOne,
@@ -377,7 +400,6 @@ class _ChatScreenState extends State<ChatScreen> {
     ToolBarStyle.codeBlock,
   ];
   final _toolbarColor = Colors.grey.shade200;
-  final _backgroundColor = Colors.white70;
   final _toolbarIconColor = Colors.black87;
   final _editorTextStyle = const TextStyle(
       fontSize: 16,
@@ -433,21 +455,6 @@ class _ChatScreenState extends State<ChatScreen> {
                   hintTextStyle: _hintTextStyle,
                   hintTextAlign: TextAlign.start,
                   inputAction: InputAction.newline,
-                  onFocusChanged: (focus) async {
-                    // debugPrint('has focus $focus from $_hasFocus');
-                    // if (_hasFocus == false) {
-                    //   if (isChannel) {
-                    //     await chatProvider.fetchChannelMessages(
-                    //         organisationId, channelId);
-                    //   } else {
-                    //     await chatProvider.fetchConversationMessages(
-                    //         organisationId, channelId);
-                    //   }
-                    // }
-                    setState(() {
-                      _hasFocus = focus;
-                    });
-                  },
                 ),
               ),
               IconButton(
@@ -470,14 +477,13 @@ class _ChatScreenState extends State<ChatScreen> {
     );
 
     if (result != null) {
-      PlatformFile file = result.files.first;
       if (kIsWeb) {
         Uint8List? fileBytes = result.files.single.bytes;
         if (fileBytes != null) {
           setState(() {
             _selectedFileBytes = fileBytes; // Store file bytes for web
           });
-          await chatProvider.imageUploadByByte(_selectedFileBytes!);
+          await chatProvider.imageUploadByByte(_selectedFileBytes!, false);
         }
       } else {
         String? filePath = result.files.single.path;
@@ -485,7 +491,7 @@ class _ChatScreenState extends State<ChatScreen> {
           setState(() {
             _selectedFile = File(filePath);
           });
-          await chatProvider.imageUploadByFile(_selectedFile!);
+          await chatProvider.imageUploadByFile(_selectedFile!, false);
         }
       }
     }
@@ -516,7 +522,7 @@ class _ChatScreenState extends State<ChatScreen> {
             setState(() {
               _selectedFileBytes = fileBytes; // Store file bytes for web
             });
-            await chatProvider.videoUploadByByte(_selectedFileBytes!);
+            await chatProvider.videoUploadByByte(_selectedFileBytes!, false);
           }
         } else {
           String? filePath = result.files.single.path;
@@ -524,7 +530,7 @@ class _ChatScreenState extends State<ChatScreen> {
             setState(() {
               _selectedFile = File(filePath);
             });
-            await chatProvider.videoUploadByFile(_selectedFile!);
+            await chatProvider.videoUploadByFile(_selectedFile!, false);
           }
         }
       }
@@ -539,7 +545,6 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _insertVideoIntoEditor(String filename) async {
-    String baseUrl = dotenv.env['API_BASE_URL']!;
     String src = '${dotenv.env['API_BASE_URL']!}/static/image/$filename';
     String customHtml = '''<a href="$src" target="_blank">$filename</a>''';
     String cleanedHtmlString = cleanHtmlString(customHtml);
@@ -598,12 +603,12 @@ class _ChatScreenState extends State<ChatScreen> {
     final newMsg = {"sender": chatProvider.user!, "content": nextContent};
     await chatProvider.sendMessage(
         organisationId, channelId, newMsg, isChannel);
-    _scrollToBottom();
+    _scrollToBottom(animate: true);
     _controller.clear(); // Clear editor after sending
   }
 
   void _handleReaction(BuildContext context, Message message, String emoji) {
-    chatProvider.addEmojiReaction(message, emoji);
+    chatProvider.addReact(message, emoji);
     // Navigator.pop(context);
   }
 

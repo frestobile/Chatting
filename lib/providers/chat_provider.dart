@@ -1,19 +1,23 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:ainaglam/models/threadmsg_model.dart';
 import 'package:flutter/foundation.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:ainaglam/models/message_model.dart';
-import '../models/channel_model.dart';
-import '../models/coworker_model.dart';
-import '../models/conversation_model.dart';
+import 'package:ainaglam/models/channel_model.dart';
+import 'package:ainaglam/models/coworker_model.dart';
+import 'package:ainaglam/models/conversation_model.dart';
 import 'package:ainaglam/services/chat_service.dart';
+import 'package:ainaglam/services/thread_service.dart';
 
 class ChatProvider with ChangeNotifier {
   final ChatService _chatService = ChatService();
+  final ThreadService _threadService = ThreadService();
   late IO.Socket? _socket;
 
   List<Message> _messages = [];
+  List<ThreadMsg> _threadMessages = [];
   Message? _selectedMessage;
   bool _isLoading = false;
 
@@ -26,6 +30,7 @@ class ChatProvider with ChangeNotifier {
   String? _uploadedVideoName;
 
   List<Message> get messages => _messages;
+  List<ThreadMsg> get threadMessages => _threadMessages;
   Message? get selectedMessage => _selectedMessage;
   bool get isLoading => _isLoading;
 
@@ -63,8 +68,19 @@ class ChatProvider with ChangeNotifier {
         Message msg = Message.fromJson(data['message']);
         int index = _messages.indexWhere((item) => item.id == data['id']);
         _messages[index] = msg;
+      } else {
+        ThreadMsg msg = ThreadMsg.fromJson(data['message']);
+        int index = _threadMessages.indexWhere((item) => item.id == data['id']);
+        _threadMessages[index] = msg;
+        _selectedMessage?.threadReplies.add(msg.sender);
+        
       }
       notifyListeners();
+    });
+    _socket!.on('thread-message', (data) {
+      ThreadMsg receivedMessage = ThreadMsg.fromJson(data['newMessage']);
+      _threadMessages.add(receivedMessage);
+      notifyListeners(); // Notify UI about the new message
     });
 
     _socket!.on('message-delete', (data) {
@@ -179,6 +195,18 @@ class ChatProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> deleteThreadMessage(
+      ThreadMsg message, Coworker user, String channelId) async {
+    _socket?.emit('message-delete', {
+      'channelId': channelId,
+      'messageId': message.id,
+      'userId': user.id,
+      'isThread': true
+    });
+    _threadMessages.remove(message);
+    notifyListeners();
+  }
+
   Future<void> sendMessage(String workspaceId, String channelId,
       Map<String, dynamic> message, bool isChannel) async {
     final msg = {
@@ -204,7 +232,7 @@ class ChatProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> addEmojiReaction(Message message, String emoji) async {
+  Future<void> addReact(Message message, String emoji) async {
     _selectedMessage = message;
     _socket?.emit('reaction', {
       'emoji': emoji,
@@ -215,14 +243,31 @@ class ChatProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> addReactForThread(
+      ThreadMsg message, Message msg, String emoji, Coworker user) async {
+    _selectedMessage = msg;
+    _socket!.emit('reaction', {
+      'emoji': emoji,
+      'id': message.id,
+      'userId': user.id,
+      'isThread': true
+    });
+    notifyListeners();
+  }
+
   // Image upload
-  Future<void> imageUploadByByte(Uint8List imgData) async {
+  Future<void> imageUploadByByte(Uint8List imgData, bool isThread) async {
     _uploadedImageName = null;
     _errorMessage = null;
     _isLoading = true;
     notifyListeners();
     try {
-      final response = await _chatService.imageUploadByByte(imgData);
+      final Map<String, dynamic> response;
+      if (isThread) {
+        response = await _threadService.imageUploadByByte(imgData);
+      } else {
+        response = await _chatService.imageUploadByByte(imgData);
+      }
       if (response['success'] == true) {
         String fileName = response['data']['filename'];
         _uploadedImageName = fileName;
@@ -237,13 +282,19 @@ class ChatProvider with ChangeNotifier {
     }
   }
 
-  Future<void> imageUploadByFile(File imgData) async {
+  Future<void> imageUploadByFile(File imgData, bool isThread) async {
     _uploadedImageName = null;
     _errorMessage = null;
     _isLoading = true;
     notifyListeners();
     try {
-      final response = await _chatService.imageUploadByFile(imgData);
+      final Map<String, dynamic> response;
+      if (isThread) {
+        response = await _threadService.imageUploadByFile(imgData);
+      } else {
+        response = await _chatService.imageUploadByFile(imgData);
+      }
+
       if (response['success'] == true) {
         String fileName = response['data']['filename'];
         _uploadedImageName = fileName;
@@ -259,18 +310,23 @@ class ChatProvider with ChangeNotifier {
   }
 
   // Video upload
-  Future<void> videoUploadByByte(Uint8List imgData) async {
+  Future<void> videoUploadByByte(Uint8List imgData, bool isThread) async {
     _uploadedVideoName = null;
     _errorMessage = null;
     _isLoading = true;
     notifyListeners();
     try {
-      final response = await _chatService.videoUploadByByte(imgData);
+      final Map<String, dynamic> response;
+      if (isThread) {
+        response = await _threadService.videoUploadByByte(imgData);
+      } else {
+        response = await _chatService.videoUploadByByte(imgData);
+      }
       if (response['success'] == true) {
         String fileName = response['data']['filename'];
         _uploadedVideoName = fileName;
       } else {
-        _errorMessage = "Image uplaod failed.";
+        _errorMessage = "Video uplaod failed.";
       }
     } catch (error) {
       _errorMessage = "An error occurred: $error";
@@ -280,13 +336,19 @@ class ChatProvider with ChangeNotifier {
     }
   }
 
-  Future<void> videoUploadByFile(File imgData) async {
+  Future<void> videoUploadByFile(File imgData, bool isThread) async {
     _uploadedVideoName = null;
     _errorMessage = null;
     _isLoading = true;
     notifyListeners();
     try {
-      final response = await _chatService.videoUploadByFile(imgData);
+      final Map<String, dynamic> response;
+      if (isThread) {
+        response = await _threadService.videoUploadByFile(imgData);
+      } else {
+        response = await _chatService.videoUploadByFile(imgData);
+      }
+
       if (response['success'] == true) {
         String fileName = response['data']['filename'];
         _uploadedVideoName = fileName;
@@ -299,6 +361,35 @@ class ChatProvider with ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  Future<void> fetchThreadMessages(String messageId) async {
+    _errorMessage = null;
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final response = await _threadService.fetchThreadMessages(messageId);
+      if (response['success'] == true) {
+        List<dynamic> jsonMap = json.decode(response['data'])['data'];
+        _threadMessages =
+            jsonMap.map((msg) => ThreadMsg.fromJson(msg)).toList();
+        // _user = response['user'];
+      } else {
+        _errorMessage = response['msg'];
+      }
+    } catch (error) {
+      _errorMessage = "An error occurred: $error";
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  void sendThreadMessage(
+      String threadId, Coworker user, Map<String, dynamic> msg) {
+    _socket!.emit('thread-message',
+        {'message': msg, 'messageId': threadId, 'userId': user.id});
+    notifyListeners();
   }
 
   @override

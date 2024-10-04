@@ -4,7 +4,7 @@ import './reaction_model.dart';
 class Message {
   final String id;
   final Coworker? sender;
-  final String content;
+  late final String content;
   final String organisation;
   final String channel;
   final String conversation;

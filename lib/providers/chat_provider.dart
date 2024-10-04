@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:ainaglam/models/threadmsg_model.dart';
+import 'package:ainaglam/models/user_model.dart';
 import 'package:flutter/foundation.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -28,6 +29,8 @@ class ChatProvider with ChangeNotifier {
   Conversation? _convData;
   String? _uploadedImageName;
   String? _uploadedVideoName;
+  String? _currentChannlId;
+  String? _currentConvId;
 
   List<Message> get messages => _messages;
   List<ThreadMsg> get threadMessages => _threadMessages;
@@ -60,20 +63,43 @@ class ChatProvider with ChangeNotifier {
     // Listen for messages from the server
     _socket!.on('message', (data) {
       Message receivedMessage = Message.fromJson(data['newMessage']);
+
       _messages.add(receivedMessage);
+      messageView(receivedMessage);
       notifyListeners(); // Notify UI about the new message
     });
+
+    _socket!.on('channel-updated', (updatedChannel) {
+      _channelData = Channel.fromJson(updatedChannel);
+      notifyListeners();
+    });
+
+    _socket!.on('convo-updated', (updatedConversation) {
+      _convData = Conversation.fromJson(updatedConversation);
+      notifyListeners();
+    });
+
+    _socket!.on('message-update', (data) {
+      int index = _messages.indexWhere((item) => item.id == data['_id']);
+      // _messages[index].content = data['updatedContent'];
+    });
     _socket!.on('message-updated', (data) {
-      if (data['isThread'] == false) {
-        Message msg = Message.fromJson(data['message']);
+      if (data['id'] == _selectedMessage!.id) {
+        Message updated_msg = Message.fromJson(data['message']);
         int index = _messages.indexWhere((item) => item.id == data['id']);
-        _messages[index] = msg;
-      } else {
+        _messages[index] = updated_msg;
+        _selectedMessage = updated_msg;
+      }
+
+      if (data['isThread']) {
         ThreadMsg msg = ThreadMsg.fromJson(data['message']);
         int index = _threadMessages.indexWhere((item) => item.id == data['id']);
         _threadMessages[index] = msg;
         _selectedMessage?.threadReplies.add(msg.sender);
-        
+      } else {
+        Message msg = Message.fromJson(data['message']);
+        int index = _messages.indexWhere((item) => item.id == data['id']);
+        _messages[index] = msg;
       }
       notifyListeners();
     });
@@ -93,8 +119,15 @@ class ChatProvider with ChangeNotifier {
     });
   }
 
+  void disconnect() {
+    _socket!.disconnect();
+    _socket!
+        .clearListeners(); // Important: Clears all listeners to prevent duplication
+  }
+
   Future<void> fetchChannelData(String channelId) async {
     _isLoading = true;
+    _currentChannlId = null;
     notifyListeners();
     try {
       final response = await _chatService.fetchChannelData(channelId);
@@ -102,7 +135,7 @@ class ChatProvider with ChangeNotifier {
         Map<String, dynamic> channelJson =
             json.decode(response['data'])['data'];
         _channelData = Channel.fromJson(channelJson);
-        // print(channelData!.title);
+        _currentChannlId = _channelData!.id;
       }
     } catch (error) {
       _errorMessage = "An error occurred: $error";
@@ -114,6 +147,7 @@ class ChatProvider with ChangeNotifier {
 
   Future<void> fetchConversationData(String conversationlId) async {
     _isLoading = true;
+    _currentConvId = null;
     notifyListeners();
     try {
       final response =
@@ -121,6 +155,7 @@ class ChatProvider with ChangeNotifier {
       if (response['success'] == true) {
         Map<String, dynamic> convJson = json.decode(response['data'])['data'];
         _convData = Conversation.fromJson(convJson);
+        _currentConvId = _convData!.id;
       }
     } catch (error) {
       _errorMessage = "An error occurred: $error";
@@ -144,6 +179,7 @@ class ChatProvider with ChangeNotifier {
         _messages = jsonMap.map((msg) => Message.fromJson(msg)).toList();
 
         _user = response['user'];
+        _socket?.emit("channel-open", {"id": channelId, 'userId': _user!.id});
       } else {
         _errorMessage = response['msg'];
       }
@@ -167,6 +203,8 @@ class ChatProvider with ChangeNotifier {
         List<dynamic> jsonMap = json.decode(response['data'])['data'];
         _messages = jsonMap.map((msg) => Message.fromJson(msg)).toList();
         _user = response['user'];
+        _socket
+            ?.emit("convo-open", {"id": conversationlId, 'userId': _user!.id});
         // print(_user!.displayName);
       } else {
         _errorMessage = response['msg'];
@@ -217,12 +255,13 @@ class ChatProvider with ChangeNotifier {
           : convData!.collaborators.where((c) => c.id != user!.id).toList(),
       'isPublic': isChannel ? true : false
     };
-    print(msg['hasNotOpen']);
     if (isChannel == true) {
+      _currentChannlId = channelId;
       msg['channelId'] = channelId;
       msg['channelName'] = channelData!.name;
       msg['collaborators'] = channelData!.collaborators;
     } else {
+      _currentConvId = channelId;
       msg['conversationId'] = channelId;
       msg['collaborators'] = convData!.collaborators;
       msg['isSelf'] =
@@ -240,17 +279,17 @@ class ChatProvider with ChangeNotifier {
       'userId': user!.id,
       'isThread': false
     });
+    _socket?.emit('message-view', {
+      'messageId': message.id,
+      'userId': user!.id,
+    });
     notifyListeners();
   }
 
-  Future<void> addReactForThread(
-      ThreadMsg message, Message msg, String emoji, Coworker user) async {
-    _selectedMessage = msg;
-    _socket!.emit('reaction', {
-      'emoji': emoji,
-      'id': message.id,
-      'userId': user.id,
-      'isThread': true
+  void messageView(Message message) async {
+    _socket?.emit('message-view', {
+      'messageId': message.id,
+      'userId': user!.id,
     });
     notifyListeners();
   }
@@ -361,35 +400,6 @@ class ChatProvider with ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
-  }
-
-  Future<void> fetchThreadMessages(String messageId) async {
-    _errorMessage = null;
-    _isLoading = true;
-    notifyListeners();
-    try {
-      final response = await _threadService.fetchThreadMessages(messageId);
-      if (response['success'] == true) {
-        List<dynamic> jsonMap = json.decode(response['data'])['data'];
-        _threadMessages =
-            jsonMap.map((msg) => ThreadMsg.fromJson(msg)).toList();
-        // _user = response['user'];
-      } else {
-        _errorMessage = response['msg'];
-      }
-    } catch (error) {
-      _errorMessage = "An error occurred: $error";
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  void sendThreadMessage(
-      String threadId, Coworker user, Map<String, dynamic> msg) {
-    _socket!.emit('thread-message',
-        {'message': msg, 'messageId': threadId, 'userId': user.id});
-    notifyListeners();
   }
 
   @override

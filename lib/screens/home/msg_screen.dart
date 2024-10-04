@@ -55,25 +55,20 @@ class _ChatScreenState extends State<ChatScreen> {
   void initState() {
     super.initState();
     chatProvider = Provider.of<ChatProvider>(context, listen: false);
-    setState(() {
-      organisationId = widget.workspaceId;
-      channelId = widget.channelId;
-      title = widget.title;
-      avatar = widget.avatar;
-      isChannel = !widget.isPrivateChat;
-    });
-    // organisationId = widget.workspaceId;
+    organisationId = widget.workspaceId;
+    channelId = widget.channelId;
+    title = widget.title;
+    avatar = widget.avatar;
+    isChannel = !widget.isPrivateChat;
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (widget.isPrivateChat) {
         await chatProvider.fetchConversationMessages(
             widget.workspaceId, widget.channelId);
         await chatProvider.fetchConversationData(channelId);
-        channelId = widget.channelId;
       } else {
         await chatProvider.fetchChannelMessages(
             widget.workspaceId, widget.channelId);
-        await chatProvider.fetchChannelData(channelId);
-        channelId = widget.channelId;
+        // await chatProvider.fetchChannelData(channelId);
       }
     });
 
@@ -88,7 +83,7 @@ class _ChatScreenState extends State<ChatScreen> {
     _removeReactionPanel();
     _controller.dispose();
     _scrollController.dispose();
-    // chatProvider.dispose();
+    chatProvider.disconnect();
     super.dispose();
   }
 
@@ -236,9 +231,9 @@ class _ChatScreenState extends State<ChatScreen> {
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(80.0),
         child: Container(
-          decoration: const BoxDecoration(
-            color: Colors.white, // App bar background color
-            boxShadow: [
+          decoration: BoxDecoration(
+            color: Colors.grey[200], // App bar background color
+            boxShadow: const [
               BoxShadow(
                 color: Colors.black26,
                 blurRadius: 1,
@@ -332,6 +327,10 @@ class _ChatScreenState extends State<ChatScreen> {
                           itemBuilder: (context, index) {
                             final message = chatProvider.messages[index];
                             final GlobalKey key = GlobalKey();
+                            if (message.unreadmember.isNotEmpty) {
+                              chatProvider.messageView(message);
+                            }
+
                             return GestureDetector(
                               key: key,
                               onTap: () {

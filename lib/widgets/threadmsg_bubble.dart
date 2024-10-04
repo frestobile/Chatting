@@ -14,7 +14,8 @@ class ThreadMessage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-        margin: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 30.0),
+        padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 25.0),
+        color: Colors.white,
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -57,8 +58,8 @@ class ThreadMessage extends StatelessWidget {
                   padding: const EdgeInsets.all(5.0),
                   decoration: BoxDecoration(
                     color: message.sender.id == user.id
-                        ? Colors.blue
-                        : Colors.grey[300],
+                        ? Colors.grey[300]
+                        : Colors.grey[100],
                     borderRadius: BorderRadius.circular(12.0),
                   ),
                   child: Html(data: message.content),

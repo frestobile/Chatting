@@ -15,7 +15,7 @@ class ThreadProvider with ChangeNotifier {
   List<ThreadMsg> _threadMessages = [];
   bool _isLoading = false;
   Message? _selectedMessage;
-  
+
   String? _errorMessage;
   String? _currentMessageId;
   // Coworker? _user;
@@ -66,12 +66,18 @@ class ThreadProvider with ChangeNotifier {
     });
   }
 
-  Future<void> fetchThreadMessages(String messageId) async {
+  void disconnect() {
+    _socket!.disconnect();
+    _socket!
+        .clearListeners(); // Important: Clears all listeners to prevent duplication
+  }
+
+  Future<void> fetchThreadMessages(Message message) async {
     _errorMessage = null;
     _isLoading = true;
     notifyListeners();
     try {
-      final response = await _threadService.fetchThreadMessages(messageId);
+      final response = await _threadService.fetchThreadMessages(message.id);
       if (response['success'] == true) {
         List<dynamic> jsonMap = json.decode(response['data'])['data'];
         _threadMessages =
@@ -117,7 +123,7 @@ class ThreadProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  void sendMessages(String threadId, Coworker user, Map<String, dynamic> msg) {
+  void sendMessage(String threadId, Coworker user, Map<String, dynamic> msg) {
     _socket!.emit('thread-message',
         {'message': msg, 'messageId': threadId, 'userId': user.id});
     notifyListeners();

@@ -13,7 +13,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
 
 import 'package:ainaglam/models/message_model.dart';
-import 'package:ainaglam/providers/chat_provider.dart';
+import 'package:ainaglam/providers/thread_provider.dart';
 import 'package:ainaglam/widgets/threadmsg_bubble.dart';
 import 'package:ainaglam/widgets/message_bubble.dart';
 import 'package:ainaglam/models/coworker_model.dart';
@@ -37,7 +37,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
   OverlayEntry? _overlayEntry;
   final ScrollController _scrollController = ScrollController();
   final QuillEditorController _controller = QuillEditorController();
-  ChatProvider threadProvider = ChatProvider();
+  ThreadProvider threadProvider = ThreadProvider();
   Message? parentMessage;
   Coworker? userData;
   String? title;
@@ -55,9 +55,9 @@ class _ThreadScreenState extends State<ThreadScreen> {
     userData = widget.user;
     title = widget.chatTitle;
 
-    threadProvider = Provider.of<ChatProvider>(context, listen: false);
+    threadProvider = Provider.of<ThreadProvider>(context, listen: false);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await threadProvider.fetchThreadMessages(parentMessage!.id);
+      await threadProvider.fetchThreadMessages(parentMessage!);
     });
 
     _scrollController.addListener(() {
@@ -66,7 +66,9 @@ class _ThreadScreenState extends State<ThreadScreen> {
         _scrollToBottom();
       }
     });
-    threadProvider.connect();
+    if (mounted) {
+      threadProvider.connect();
+    }
   }
 
   @override
@@ -74,7 +76,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
     _removeReactionPanel();
     _scrollController.dispose();
     _controller.dispose();
-    // threadProvider.dispose();
+    threadProvider.disconnect();
     super.dispose();
   }
 
@@ -147,10 +149,10 @@ class _ThreadScreenState extends State<ThreadScreen> {
                       onTap: () {
                         _removeReactionPanel();
                         if (parentMessage!.conversation == '') {
-                          threadProvider.deleteThreadMessage(
+                          threadProvider.deleteMessage(
                               message, userData!, parentMessage!.channel);
                         } else if (parentMessage!.channel == '') {
-                          threadProvider.deleteThreadMessage(
+                          threadProvider.deleteMessage(
                               message, userData!, parentMessage!.conversation);
                         }
                       },
@@ -206,9 +208,9 @@ class _ThreadScreenState extends State<ThreadScreen> {
       appBar: PreferredSize(
           preferredSize: const Size.fromHeight(80.0),
           child: Container(
-            decoration: const BoxDecoration(
-              color: Colors.white, // App bar background color
-              boxShadow: [
+            decoration: BoxDecoration(
+              color: Colors.grey[200], // App bar background color
+              boxShadow: const [
                 BoxShadow(
                   color: Colors.black26,
                   blurRadius: 1,
@@ -304,7 +306,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
                   children: [
                     Column(
                       children: [
-                        Expanded(child: Consumer<ChatProvider>(
+                        Expanded(child: Consumer<ThreadProvider>(
                           builder: (context, threadProvider, _) {
                             if (threadProvider.isLoading) {
                               return const Center(
@@ -446,7 +448,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
 
   void _handleReaction(BuildContext context, ThreadMsg message, String emoji) {
     // final threadProvider = Provider.of<ThreadProvider>(context, listen: false);
-    threadProvider.addReactForThread(message, parentMessage!, emoji, userData!);
+    threadProvider.addEmojiReaction(message, parentMessage!, emoji, userData!);
     // Navigator.pop(context);
   }
 
@@ -466,7 +468,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
           setState(() {
             _selectedFileBytes = fileBytes; // Store file bytes for web
           });
-          await threadProvider.imageUploadByByte(_selectedFileBytes!, true);
+          await threadProvider.imageUploadByByte(_selectedFileBytes!);
         }
       } else {
         String? filePath = result.files.single.path;
@@ -474,7 +476,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
           setState(() {
             _selectedFile = File(filePath);
           });
-          await threadProvider.imageUploadByFile(_selectedFile!, true);
+          await threadProvider.imageUploadByFile(_selectedFile!);
         }
       }
     }
@@ -505,7 +507,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
             setState(() {
               _selectedFileBytes = fileBytes; // Store file bytes for web
             });
-            await threadProvider.videoUploadByByte(_selectedFileBytes!, true);
+            await threadProvider.videoUploadByByte(_selectedFileBytes!);
           }
         } else {
           String? filePath = result.files.single.path;
@@ -513,7 +515,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
             setState(() {
               _selectedFile = File(filePath);
             });
-            await threadProvider.videoUploadByFile(_selectedFile!, true);
+            await threadProvider.videoUploadByFile(_selectedFile!);
           }
         }
       }
@@ -584,7 +586,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
     }
 
     final newMsg = {"sender": userData!, "content": nextContent};
-    threadProvider.sendThreadMessage(parentMessage!.id, userData!, newMsg);
+    threadProvider.sendMessage(parentMessage!.id, userData!, newMsg);
     _scrollToBottom(animate: true);
     _controller.clear(); // Clear editor after sending
   }

@@ -21,7 +21,8 @@ class MessageBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 20.0),
+      padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 20.0),
+      color: Colors.white,
       child: message.type != 'date'
           ? Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -41,6 +42,8 @@ class MessageBubble extends StatelessWidget {
                             : const AssetImage('avatars/default.png'),
                       ),
                 const SizedBox(width: 10.0),
+                // if (message.unreadmember.isNotEmpty)
+                // Text("${message.unreadmember.length}"),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

@@ -1,7 +1,9 @@
 // import 'package:ainaglam/providers/home_provider.dart';
 import 'dart:io';
 
+import 'package:ainaglam/models/conversation_model.dart';
 import 'package:ainaglam/models/threadmsg_model.dart';
+import 'package:ainaglam/models/workspace_model.dart';
 import 'package:ainaglam/utils/dialog.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -20,14 +22,19 @@ import 'package:ainaglam/models/coworker_model.dart';
 import 'package:ainaglam/screens/home/msg_screen.dart';
 
 class ThreadScreen extends StatefulWidget {
+  final Workspace workspace;
   final Message message;
   final Coworker user;
   final String chatTitle;
-  const ThreadScreen(
-      {super.key,
-      required this.message,
-      required this.user,
-      required this.chatTitle});
+  final Conversation? conversation;
+  const ThreadScreen({
+    super.key,
+    required this.workspace,
+    required this.message,
+    required this.user,
+    required this.chatTitle,
+    this.conversation,
+  });
 
   @override
   _ThreadScreenState createState() => _ThreadScreenState();
@@ -60,12 +67,7 @@ class _ThreadScreenState extends State<ThreadScreen> {
       await threadProvider.fetchThreadMessages(parentMessage!);
     });
 
-    _scrollController.addListener(() {
-      if (_scrollController.position.pixels ==
-          _scrollController.position.maxScrollExtent) {
-        _scrollToBottom();
-      }
-    });
+    _scrollController.addListener(_onScroll);
     if (mounted) {
       threadProvider.connect();
     }
@@ -226,17 +228,18 @@ class _ThreadScreenState extends State<ThreadScreen> {
                 children: [
                   IconButton(
                     onPressed: () {
-                      // Navigator.pop(context);
                       Navigator.of(context).pushReplacement(
                         MaterialPageRoute(
                           builder: (context) => ChatScreen(
-                              workspaceId: parentMessage!.organisation,
+                              workspace: widget.workspace,
                               channelId: parentMessage!.channel == ''
                                   ? parentMessage!.conversation
                                   : parentMessage!.channel,
                               isPrivateChat:
                                   parentMessage!.channel == '' ? true : false,
                               title: title!,
+                              user: userData,
+                              conversation: widget.conversation,
                               avatar: ''),
                         ),
                       );

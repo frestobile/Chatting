@@ -140,12 +140,8 @@ class _WorkSpaceScreenState extends State<WorkspaceScreen> {
                                               MaterialPageRoute(
                                                 builder: (context) =>
                                                     HomeScreen(
-                                                        workspaceId:
-                                                            workspaces[index]
-                                                                .id,
-                                                        workspaceName:
-                                                            workspaces[index]
-                                                                .name),
+                                                  workspace: workspace,
+                                                ),
                                               ),
                                             );
                                           },

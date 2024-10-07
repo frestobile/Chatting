@@ -226,4 +226,62 @@ class ChatService {
       };
     }
   }
+
+  Future<Map<String, dynamic>> updatProfile(
+      String username,
+      String displayName,
+      String orgId,
+      Uint8List? avatarBytes,
+      File? avatarFile,
+      bool? isMobile) async {
+    User? userData = await _authProvider.loadAuthData();
+
+    final uri = Uri.parse('$_baseUrl/user');
+    var request = http.MultipartRequest('PUT', uri);
+
+    Map<String, String> headers = {
+      'Authorization':
+          'Bearer ${userData!.token}', // Example header for authorization
+      'Content-Type': 'multipart/form-data', // Set Content-Type
+    };
+    request.headers.addAll(headers);
+    if (isMobile != null) {
+      if (isMobile) {
+        request.files.add(await http.MultipartFile.fromPath(
+            'file', avatarFile!.path,
+            filename: 'avatar'));
+      } else {
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'file',
+            avatarBytes!,
+            filename: 'avatar',
+          ),
+        );
+      }
+    }
+
+    request.fields['organisationId'] = orgId;
+    request.fields['usernam'] = username;
+    request.fields['displayName'] = displayName;
+
+    final response = await request.send();
+
+    String responseBody = await response.stream.bytesToString();
+    var decodedJson = jsonDecode(responseBody);
+    Coworker? user = Coworker.fromJson(decodedJson);
+    _homeProvider.saveUserToPrefs(user);
+
+    print("Parsed JSON: $decodedJson");
+    await _homeProvider.loadUserFromPrefs();
+    if (response.statusCode == 200) {
+      return {'success': true, 'msg': '', 'data': decodedJson};
+    } else {
+      return {
+        'success': false,
+        'msg': 'Failed to update the profile',
+        'data': decodedJson
+      };
+    }
+  }
 }

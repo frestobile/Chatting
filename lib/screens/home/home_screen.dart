@@ -1,5 +1,6 @@
 // import 'package:ainaglam/screens/home/chat_screen.dart';
 import 'package:ainaglam/models/user_model.dart';
+import 'package:ainaglam/models/workspace_model.dart';
 import 'package:ainaglam/providers/auth_provider.dart';
 import 'package:ainaglam/screens/auth/login_screen.dart';
 import 'package:ainaglam/screens/home/msg_screen.dart';
@@ -15,11 +16,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 // import '../../models/user_model.dart';
 
 class HomeScreen extends StatefulWidget {
-  final String workspaceId;
-  final String workspaceName;
+  final Workspace workspace;
 
-  const HomeScreen(
-      {super.key, required this.workspaceId, required this.workspaceName});
+  const HomeScreen({
+    super.key,
+    required this.workspace,
+  });
   @override
   _HomeScreenState createState() => _HomeScreenState();
 }
@@ -32,10 +34,10 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
 
-    title = widget.workspaceName;
+    title = widget.workspace.name;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<HomeProvider>(context, listen: false)
-          .fetchWorkspaceDetails(widget.workspaceId);
+          .fetchWorkspaceDetails(widget.workspace.id);
     });
   }
 
@@ -43,7 +45,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: PreferredSize(
-        preferredSize: Size.fromHeight(80.0),
+        preferredSize: const Size.fromHeight(80.0),
         child: Container(
           decoration: BoxDecoration(
             color: Colors.grey[200], // App bar background color
@@ -196,13 +198,15 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                             child: GestureDetector(
                               onTap: () {
-                                Navigator.of(context).push(
+                                Navigator.pushReplacement(
+                                  context,
                                   MaterialPageRoute(
-                                      builder: (context) => ChatScreen(
-                                            workspaceId: channel.organisation,
-                                            channelId: channel.id,
-                                            title: channel.name,
-                                          )),
+                                    builder: (context) => ChatScreen(
+                                      workspace: widget.workspace,
+                                      channelId: channel.id,
+                                      title: channel.name,
+                                    ),
+                                  ),
                                 );
                               },
                               child: Container(
@@ -240,10 +244,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       },
                     ),
                   ),
-                  // ListTile(
-                  //   leading: Icon(Icons.add_circle_outline),
-                  //   title: Text("新しいスレッドを作成する"),
-                  // ),
+
                   const Divider(),
                   const Row(
                     mainAxisAlignment: MainAxisAlignment.start,
@@ -268,14 +269,16 @@ class _HomeScreenState extends State<HomeScreen> {
                           padding: const EdgeInsets.only(left: 5.0, right: 5.0),
                           child: GestureDetector(
                             onTap: () {
-                              Navigator.of(context).push(
+                              Navigator.of(context).pushReplacement(
                                 MaterialPageRoute(
                                   builder: (context) => ChatScreen(
-                                    workspaceId: widget.workspaceId,
+                                    workspace: widget.workspace,
                                     channelId: conversation.id,
                                     isPrivateChat: true,
                                     title: conversation.name,
                                     avatar: conversation.avatar,
+                                    conversation: conversation,
+                                    user: homeProvider.profileUser,
                                   ),
                                 ),
                               );
@@ -303,7 +306,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                                   'avatars/default.png'),
                                         ),
                                   const SizedBox(width: 10),
-                                  conversation.collaborators.length == 1
+                                  conversation.isSelf
                                       ? Text('${conversation.name} (あなた)',
                                           style: const TextStyle(
                                               fontSize: 14,

@@ -134,13 +134,6 @@ class SmsVerificationScreen extends StatelessWidget {
                                           await authProvider.verifySmsCode(
                                               smsCode, context);
                                           if (authProvider.status == true) {
-                                            // final workspaceProvider =
-                                            //     Provider.of<WorkspaceProvider>(
-                                            //         context,
-                                            //         listen: false);
-                                            // await workspaceProvider
-                                            //     .fetchWorkspaces(
-                                            //         authProvider.token!);
                                             Navigator.of(context)
                                                 .pushReplacement(
                                               MaterialPageRoute(

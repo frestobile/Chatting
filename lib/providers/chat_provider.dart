@@ -69,6 +69,10 @@ class ChatProvider with ChangeNotifier {
       notifyListeners(); // Notify UI about the new message
     });
 
+    _socket!.on("message-viewed", (message) {
+      print(message);
+    });
+
     _socket!.on('channel-updated', (updatedChannel) {
       _channelData = Channel.fromJson(updatedChannel);
       notifyListeners();
@@ -91,16 +95,10 @@ class ChatProvider with ChangeNotifier {
         _selectedMessage = updated_msg;
       }
 
-      if (data['isThread']) {
-        ThreadMsg msg = ThreadMsg.fromJson(data['message']);
-        int index = _threadMessages.indexWhere((item) => item.id == data['id']);
-        _threadMessages[index] = msg;
-        _selectedMessage?.threadReplies.add(msg.sender);
-      } else {
-        Message msg = Message.fromJson(data['message']);
-        int index = _messages.indexWhere((item) => item.id == data['id']);
-        _messages[index] = msg;
-      }
+      Message msg = Message.fromJson(data['message']);
+      int index = _messages.indexWhere((item) => item.id == data['id']);
+      _messages[index] = msg;
+
       notifyListeners();
     });
     _socket!.on('thread-message', (data) {
@@ -168,6 +166,7 @@ class ChatProvider with ChangeNotifier {
   Future<void> fetchChannelMessages(
       String workspaceId, String channelId) async {
     _errorMessage = null;
+    _messages = [];
     _isLoading = true;
     notifyListeners();
     try {
@@ -177,7 +176,6 @@ class ChatProvider with ChangeNotifier {
         List<dynamic> jsonMap = json.decode(response['data'])['data'];
 
         _messages = jsonMap.map((msg) => Message.fromJson(msg)).toList();
-
         _user = response['user'];
         _socket?.emit("channel-open", {"id": channelId, 'userId': _user!.id});
       } else {
@@ -194,6 +192,7 @@ class ChatProvider with ChangeNotifier {
   Future<void> fetchConversationMessages(
       String workspaceId, String conversationlId) async {
     _errorMessage = null;
+    _messages = [];
     _isLoading = true;
     notifyListeners();
     try {
@@ -205,7 +204,6 @@ class ChatProvider with ChangeNotifier {
         _user = response['user'];
         _socket
             ?.emit("convo-open", {"id": conversationlId, 'userId': _user!.id});
-        // print(_user!.displayName);
       } else {
         _errorMessage = response['msg'];
       }
@@ -264,8 +262,7 @@ class ChatProvider with ChangeNotifier {
       _currentConvId = channelId;
       msg['conversationId'] = channelId;
       msg['collaborators'] = convData!.collaborators;
-      msg['isSelf'] =
-          convData!.collaborators[0].id == convData!.collaborators[1].id;
+      msg['isSelf'] = convData!.isSelf;
     }
     _socket?.emit('message', msg);
     notifyListeners();
@@ -279,18 +276,11 @@ class ChatProvider with ChangeNotifier {
       'userId': user!.id,
       'isThread': false
     });
-    _socket?.emit('message-view', {
-      'messageId': message.id,
-      'userId': user!.id,
-    });
     notifyListeners();
   }
 
   void messageView(Message message) async {
-    _socket?.emit('message-view', {
-      'messageId': message.id,
-      'userId': user!.id,
-    });
+    _socket?.emit("message-view", [message.id, user!.id]);
     notifyListeners();
   }
 
@@ -393,6 +383,44 @@ class ChatProvider with ChangeNotifier {
         _uploadedVideoName = fileName;
       } else {
         _errorMessage = "Image upload failed";
+      }
+    } catch (error) {
+      _errorMessage = "An error occurred: $error";
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> updateProfile(
+    String username,
+    String displayName,
+    String orgId,
+    File? avatarFile,
+    Uint8List? avatarBytes, // For web (Uint8List)
+  ) async {
+    _errorMessage = null;
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final Map<String, dynamic> response;
+      if (avatarFile != null) {
+        // For mobile: Use File
+        response = await _chatService.updatProfile(
+            username, displayName, orgId, avatarBytes, avatarFile, true);
+      } else if (avatarBytes != null) {
+        // For web: Use Uint8List
+        response = await _chatService.updatProfile(
+            username, displayName, orgId, avatarBytes, avatarFile, false);
+      } else {
+        response = await _chatService.updatProfile(
+            username, displayName, orgId, avatarBytes, avatarFile, null);
+      }
+
+      if (response['success']) {
+        _user = Coworker.fromJson(response['data']);
+      } else {
+        _errorMessage = response['msg'];
       }
     } catch (error) {
       _errorMessage = "An error occurred: $error";

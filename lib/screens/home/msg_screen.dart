@@ -1,4 +1,8 @@
 import 'dart:io';
+import 'package:ainaglam/models/conversation_model.dart';
+import 'package:ainaglam/models/coworker_model.dart';
+import 'package:ainaglam/models/workspace_model.dart';
+import 'package:ainaglam/screens/home/home_screen.dart';
 import 'package:flutter/foundation.dart';
 import 'package:ainaglam/screens/home/thread_screen.dart';
 import 'package:flutter/material.dart';
@@ -12,19 +16,24 @@ import 'package:ainaglam/models/message_model.dart';
 import 'package:ainaglam/providers/chat_provider.dart';
 import 'package:ainaglam/widgets/message_bubble.dart';
 import 'package:ainaglam/utils/dialog.dart';
+import 'package:ainaglam/widgets/profile_edit.dart';
 
 class ChatScreen extends StatefulWidget {
-  final String workspaceId;
+  final Workspace workspace;
   final String channelId;
   final bool isPrivateChat;
   final String title;
   final String avatar;
+  final Conversation? conversation;
+  final Coworker? user;
   const ChatScreen({
     super.key,
-    required this.workspaceId,
+    required this.workspace,
     required this.channelId,
     this.isPrivateChat = false,
     required this.title,
+    this.conversation,
+    this.user,
     this.avatar = '',
   });
 
@@ -55,20 +64,20 @@ class _ChatScreenState extends State<ChatScreen> {
   void initState() {
     super.initState();
     chatProvider = Provider.of<ChatProvider>(context, listen: false);
-    organisationId = widget.workspaceId;
+    organisationId = widget.workspace.id;
     channelId = widget.channelId;
     title = widget.title;
     avatar = widget.avatar;
     isChannel = !widget.isPrivateChat;
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (widget.isPrivateChat) {
-        await chatProvider.fetchConversationMessages(
-            widget.workspaceId, widget.channelId);
         await chatProvider.fetchConversationData(channelId);
+        await chatProvider.fetchConversationMessages(
+            widget.workspace.id, widget.channelId);
       } else {
+        await chatProvider.fetchChannelData(channelId);
         await chatProvider.fetchChannelMessages(
-            widget.workspaceId, widget.channelId);
-        // await chatProvider.fetchChannelData(channelId);
+            widget.workspace.id, widget.channelId);
       }
     });
 
@@ -154,18 +163,15 @@ class _ChatScreenState extends State<ChatScreen> {
                 GestureDetector(
                   onTap: () {
                     _removeReactionPanel();
-                    Navigator.of(context)
-                        .push(
+                    Navigator.of(context).pushReplacement(
                       MaterialPageRoute(
                         builder: (context) => ThreadScreen(
+                            workspace: widget.workspace,
                             message: message,
                             user: chatProvider.user!,
                             chatTitle: title),
                       ),
-                    )
-                        .then((_) {
-                      setState(() {});
-                    });
+                    );
                   },
                   child: const Icon(Icons.reply, color: Colors.white),
                 ),
@@ -196,8 +202,6 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _scrollToBottom({bool animate = true}) {
-    // print("${_scrollController.position.maxScrollExtent}");
-
     if (animate) {
       _scrollController.animateTo(
         _scrollController.position.maxScrollExtent,
@@ -249,7 +253,13 @@ class _ChatScreenState extends State<ChatScreen> {
                 children: [
                   IconButton(
                     onPressed: () {
-                      Navigator.pop(context);
+                      Navigator.of(context).pushReplacement(
+                        MaterialPageRoute(
+                          builder: (context) => HomeScreen(
+                            workspace: widget.workspace,
+                          ),
+                        ),
+                      );
                     },
                     icon: const Icon(
                       Icons.arrow_back,
@@ -325,12 +335,14 @@ class _ChatScreenState extends State<ChatScreen> {
                           controller: _scrollController,
                           itemCount: chatProvider.messages.length,
                           itemBuilder: (context, index) {
-                            final message = chatProvider.messages[index];
+                            var message = chatProvider.messages[index];
                             final GlobalKey key = GlobalKey();
                             if (message.unreadmember.isNotEmpty) {
-                              chatProvider.messageView(message);
+                              if (message.unreadmember
+                                  .contains(chatProvider.user!.id)) {
+                                chatProvider.messageView(message);
+                              }
                             }
-
                             return GestureDetector(
                               key: key,
                               onTap: () {
@@ -346,18 +358,18 @@ class _ChatScreenState extends State<ChatScreen> {
                                 user: chatProvider.user!,
                                 onReply: () {
                                   _removeReactionPanel();
-                                  Navigator.of(context)
-                                      .pushReplacement(
+                                  Navigator.pushReplacement(
+                                    context,
                                     MaterialPageRoute(
                                       builder: (context) => ThreadScreen(
-                                          message: message,
-                                          user: chatProvider.user!,
-                                          chatTitle: title),
+                                        workspace: widget.workspace,
+                                        message: message,
+                                        user: chatProvider.user!,
+                                        chatTitle: title,
+                                        conversation: widget.conversation,
+                                      ),
                                     ),
-                                  )
-                                      .then((_) {
-                                    setState(() {});
-                                  });
+                                  );
                                 },
                               ),
                             );
@@ -366,6 +378,41 @@ class _ChatScreenState extends State<ChatScreen> {
                       },
                     ),
                   ),
+                  if (!isChannel && widget.conversation!.isSelf)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 15),
+                      color: Colors.white,
+                      child: GestureDetector(
+                          onTap: () {
+                            showDialog(
+                              context: context,
+                              builder: (BuildContext context) {
+                                return EditProfileDialog(
+                                  profileData: widget.user!,
+                                  workspace: widget.workspace,
+                                  chatProvider: chatProvider,
+                                );
+                              },
+                            );
+                          },
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(5),
+                                decoration: BoxDecoration(
+                                    color: Colors.grey[200],
+                                    borderRadius: BorderRadius.circular(5),
+                                    border: Border.all(
+                                        color: Colors.grey, width: 1)),
+                                child: const Text(
+                                  "プロフィール編集",
+                                  style: TextStyle(color: Colors.grey),
+                                ),
+                              )
+                            ],
+                          )),
+                    ),
                   _buildEditor()
                 ],
               ),
@@ -608,12 +655,10 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void _handleReaction(BuildContext context, Message message, String emoji) {
     chatProvider.addReact(message, emoji);
-    // Navigator.pop(context);
   }
 
   void _deleteMessage(BuildContext context, Message message) {
     final chatProvider = Provider.of<ChatProvider>(context, listen: false);
     chatProvider.deleteMessage(message);
-    // Navigator.pop(context);
   }
 }

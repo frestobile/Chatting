@@ -50,7 +50,7 @@ class HomeProvider with ChangeNotifier {
         Map<String, dynamic> profileJson =
             json.decode(response['data'])['data']['profile'];
         _profileUser = Coworker.fromJson(profileJson);
-        _saveUserToPrefs(_profileUser!);
+        saveUserToPrefs(_profileUser!);
       } else {
         _errorMessage = response['msg'];
       }
@@ -61,8 +61,8 @@ class HomeProvider with ChangeNotifier {
       notifyListeners();
     }
   }
-
-  Future<void> _saveUserToPrefs(Coworker user) async {
+  
+  Future<void> saveUserToPrefs(Coworker user) async {
     final prefs = await SharedPreferences.getInstance();
     String userJson = jsonEncode(user.toJson());
     await prefs.setString('profile_data', userJson);

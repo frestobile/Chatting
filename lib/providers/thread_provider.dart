@@ -24,6 +24,7 @@ class ThreadProvider with ChangeNotifier {
 
   List<ThreadMsg> get threadMessages => _threadMessages;
   bool get isLoading => _isLoading;
+  Message? get selectedMessage => _selectedMessage;
 
   String? get errorMessage => _errorMessage;
   String? get currentMessageId => _currentMessageId;
@@ -54,10 +55,13 @@ class ThreadProvider with ChangeNotifier {
     });
 
     _socket!.on('message-updated', (data) {
-      if (data['isThread'] == true) {
+      if (data['isThread'] != null) {
         ThreadMsg msg = ThreadMsg.fromJson(data['message']);
         int index = _threadMessages.indexWhere((item) => item.id == data['id']);
         _threadMessages[index] = msg;
+      }
+      if (data['id'] == _selectedMessage!.id) {
+        _selectedMessage = Message.fromJson(data['message']);
       }
     });
 
@@ -83,6 +87,7 @@ class ThreadProvider with ChangeNotifier {
         _threadMessages =
             jsonMap.map((msg) => ThreadMsg.fromJson(msg)).toList();
         // _user = response['user'];
+        _selectedMessage = message;
       } else {
         _errorMessage = response['msg'];
       }
